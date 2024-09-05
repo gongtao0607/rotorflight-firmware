@@ -91,6 +91,9 @@ typedef struct {
     uint8_t     ff_exponent;
     uint8_t     max_throttle;
     uint8_t     min_pid_throttle;
+    uint16_t    nitro_limiter_gain;
+    uint8_t     nitro_limiter_delta;
+    uint8_t     nitro_limiter_min;
 } governorProfile_t;
 
 typedef struct {

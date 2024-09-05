@@ -101,6 +101,12 @@ typedef struct {
     // Minimum throttle when PID active
     float           minPIDThrottle;
 
+    // Nitro Limiter algorithm
+    float           nitroLimiterLimit;
+    float           nitroLimiterGain;
+    float           nitroLimiterDelta;
+    float           nitroLimiterMin;
+
     // Throttle handover level
     float           maxIdleThrottle;
 
@@ -486,6 +492,10 @@ static void govUpdateData(void)
     gov.C = gov.K * gov.Ki * newError * pidGetDT();
     gov.D = gov.K * gov.Kd * difFilterApply(&gov.differentiator, newError);
     gov.F = gov.K * gov.Kf * totalFF;
+
+    // Nitro limiter
+    gov.nitroLimiterLimit = 1.0f - gov.nitroLimiterGain * fmaxf(gov.nitroLimiterDelta - gov.fullHeadSpeedRatio, 0);
+    gov.nitroLimiterLimit = constrainf(gov.nitroLimiterLimit, gov.nitroLimiterMin, 1.0f);
 }
 
 
@@ -898,6 +908,9 @@ static float govMode1Control(void)
     if (!((output > gov.maxThrottle && gov.C > 0) || (output < gov.minPIDThrottle && gov.C < 0)))
         gov.I += gov.C;
 
+    // Limit output by nitro limiter algorithm
+    output = constrainf(output, 0, gov.nitroLimiterLimit);
+
     // Limit output
     output = constrainf(output, gov.minPIDThrottle, gov.maxThrottle);
 
@@ -1018,6 +1031,9 @@ void governorInitProfile(const pidProfile_t *pidProfile)
 
         gov.maxThrottle = pidProfile->governor.max_throttle / 100.0f;
         gov.minPIDThrottle = pidProfile->governor.min_pid_throttle / 100.0f;
+        gov.nitroLimiterGain = pidProfile->governor.nitro_limiter_gain / 100.0f;
+        gov.nitroLimiterDelta = pidProfile->governor.nitro_limiter_delta / 100.0f;
+        gov.nitroLimiterMin = pidProfile->governor.nitro_limiter_min / 100.0f;
 
         gov.fullHeadSpeed = constrainf(pidProfile->governor.headspeed, 100, 50000);
 
