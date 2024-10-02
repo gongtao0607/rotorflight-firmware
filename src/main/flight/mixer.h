@@ -79,6 +79,8 @@ int16_t mixerSetOverride(uint8_t index, int16_t value);
 
 bool mixerIsCyclicServo(uint8_t index);
 
+/* Return value -1.0 - 1.0 (towards mixer travel limit) */
+float mixerGetUtilization(uint8_t index);
 
 /** Inline functions **/
 

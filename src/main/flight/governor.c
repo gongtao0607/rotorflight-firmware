@@ -469,6 +469,22 @@ static void govUpdateData(void)
         gov.TTAAdd = 0;
     }
 
+    // Tail Counter Torque Assist
+    float yawUtilization = mixerGetUtilization(MIXER_IN_STABILIZED_YAW);
+    float TCTA = 0;
+    if (yawUtilization > 0.90f) {
+        // Too much torque. Reduce headspeed. (TCTA is positive).
+        TCTA = (yawUtilization - 0.90f) * getSpoolUpRatio() * gov.TTAGain;
+    }
+    if (yawUtilization < -0.90f) {
+        // TCTA is negative.
+        TCTA = (yawUtilization - -0.90f) * getSpoolUpRatio() * gov.TTAGain;
+    }
+    gov.TTAAdd = -limitf(TCTA, gov.TTALimit);
+    DEBUG(TTA, 0, yawUtilization * 1000);
+    DEBUG(TTA, 1, TCTA * 1000);
+    DEBUG(TTA, 2, gov.TTAAdd * 1000);
+
     // Normalized RPM error
     float newError = (gov.targetHeadSpeed - gov.actualHeadSpeed) / gov.fullHeadSpeed + gov.TTAAdd;
 

@@ -167,6 +167,14 @@ bool mixerIsCyclicServo(uint8_t index)
     return (mixer.cyclicMapping & BIT(MIXER_SERVO_OFFSET + index));
 }
 
+float mixerGetUtilization(uint8_t index)
+{
+    const mixerInput_t *in = mixerInputs(index);
+    const float in_min = in->min / 1000.0f;
+    const float in_max = in->max / 1000.0f;
+    return scaleRangef(mixer.input[index], in_min, in_max, -1.0f, 1.0f);
+}
+
 
 /** Internal functions **/
 
