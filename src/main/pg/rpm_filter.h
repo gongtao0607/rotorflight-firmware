@@ -19,14 +19,16 @@
 
 #include "pg/pg.h"
 
+#include "axis.h"
+
 #define RPM_FILTER_BANK_COUNT 16
 
 typedef struct rpmFilteConfig_s
 {
-    uint8_t  filter_bank_rpm_source[3*RPM_FILTER_BANK_COUNT];     // RPM source
-    uint16_t filter_bank_rpm_ratio[3*RPM_FILTER_BANK_COUNT];      // RPM ratio *1000
-    uint16_t filter_bank_rpm_limit[3*RPM_FILTER_BANK_COUNT];      // RPM minimum limit
-    uint8_t  filter_bank_notch_q[3*RPM_FILTER_BANK_COUNT];        // Notch Q *10
+    uint8_t  filter_bank_rpm_source[XYZ_AXIS_COUNT*RPM_FILTER_BANK_COUNT];     // RPM source
+    uint16_t filter_bank_rpm_ratio[XYZ_AXIS_COUNT*RPM_FILTER_BANK_COUNT];      // RPM ratio *1000
+    uint16_t filter_bank_rpm_limit[XYZ_AXIS_COUNT*RPM_FILTER_BANK_COUNT];      // RPM minimum limit
+    uint8_t  filter_bank_notch_q[XYZ_AXIS_COUNT*RPM_FILTER_BANK_COUNT];        // Notch Q *10
 
 } rpmFilterConfig_t;
 

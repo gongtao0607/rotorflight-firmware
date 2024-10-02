@@ -1766,7 +1766,7 @@ static bool mspProcessOutCommand(int16_t cmdMSP, sbuf_t *dst)
 
 #ifdef USE_RPM_FILTER
     case MSP_RPM_FILTER:
-        for (int i = 0; i < RPM_FILTER_BANK_COUNT; i++) {
+        for (int i = 0; i < RPM_FILTER_BANK_COUNT * XYZ_AXIS_COUNT; i++) {
             sbufWriteU8(dst, rpmFilterConfig()->filter_bank_rpm_source[i]);
             sbufWriteU16(dst, rpmFilterConfig()->filter_bank_rpm_ratio[i]);
             sbufWriteU16(dst, rpmFilterConfig()->filter_bank_rpm_limit[i]);
@@ -2513,7 +2513,7 @@ static mspResult_e mspProcessInCommand(mspDescriptor_t srcDesc, int16_t cmdMSP, 
 #ifdef USE_RPM_FILTER
     case MSP_SET_RPM_FILTER:
         i = sbufReadU8(src);
-        if (i >= RPM_FILTER_BANK_COUNT) {
+        if (i >= RPM_FILTER_BANK_COUNT * XYZ_AXIS_COUNT) {
             return MSP_RESULT_ERROR;
         }
         rpmFilterConfigMutable()->filter_bank_rpm_source[i] = sbufReadU8(src);
