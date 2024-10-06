@@ -1012,6 +1012,10 @@ static bool mspCommonProcessOutCommand(int16_t cmdMSP, sbuf_t *dst, mspPostProce
          * sbufWriteU8(dst, currentPidProfile->yourFancyParameterA);
          * sbufWriteU8(dst, currentPidProfile->yourFancyParameterB);
         */
+        sbufWriteU8(dst, (uint8_t)currentPidProfile->flat_disk_alpha);
+        sbufWriteU8(dst, (uint8_t)currentPidProfile->flat_disk_beta);
+        sbufWriteU8(dst, currentPidProfile->flat_disk_gamma);
+        sbufWriteU8(dst, currentPidProfile->flat_disk_coll_max);
         break;
 
     default:
@@ -3541,6 +3545,12 @@ static mspResult_e mspCommonProcessInCommand(mspDescriptor_t srcDesc, int16_t cm
          *     currentPidProfile->yourFancyParameterB = sbufReadU8(src);
          * }
         */
+        if (sbufBytesRemaining(src) >= 4) {
+            currentPidProfile->flat_disk_alpha    = (int8_t)sbufReadU8(src);
+            currentPidProfile->flat_disk_beta     = (int8_t)sbufReadU8(src);
+            currentPidProfile->flat_disk_gamma    = sbufReadU8(src);
+            currentPidProfile->flat_disk_coll_max = sbufReadU8(src);
+        }
         break;
 
     default:

@@ -1131,6 +1131,33 @@ static void pidApplyYawMode3(void)
 }
 
 
+// Implementing https://github.com/rotorflight/rotorflight-old-wiki/wiki/New-features-to-consider#5-absolute-flat-disk-piro-compensation 
+static void pidApplyFlatDiskPiro(const pidProfile_t * pidProfile) {
+    float alpha = pidProfile->flat_disk_alpha / 1000.0;
+    float beta  = pidProfile->flat_disk_beta  / 1000.0;
+    float gamma = pidProfile->flat_disk_gamma / 100.0;
+    float coll_max = pidProfile->flat_disk_coll_max / 100.0;
+    
+    // Get actual outputs from the mixer
+    float coll = mixerGetInput(MIXER_IN_STABILIZED_COLLECTIVE);
+    float yaw = mixerGetInput(MIXER_IN_STABILIZED_YAW);
+
+    coll = MIN(coll, coll_max);
+    if (coll < 0 ) {
+      alpha *= gamma;
+      beta *= gamma;
+    }
+
+    const float ff_roll = alpha * yaw * coll;
+    const float ff_pitch = beta * yaw * coll;
+
+    
+    pid.data[FD_PITCH].F += ff_pitch;
+    pid.data[FD_PITCH].pidSum += ff_pitch;
+    pid.data[FD_ROLL].F += ff_roll;
+    pid.data[FD_ROLL].pidSum += ff_roll;
+}
+
 /** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **/
 
 void pidController(const pidProfile_t *pidProfile, timeUs_t currentTimeUs)
@@ -1150,6 +1177,7 @@ void pidController(const pidProfile_t *pidProfile, timeUs_t currentTimeUs)
             pidApplyOffsetBleed(pidProfile);
             pidApplyCyclicCrossCoupling();
             pidApplyYawMode3();
+            pidApplyFlatDiskPiro(pidProfile);
             break;
         case 2:
             pidApplyCyclicMode2(PID_ROLL);

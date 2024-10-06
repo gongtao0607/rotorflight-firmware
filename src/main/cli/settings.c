@@ -1183,6 +1183,11 @@ const clivalue_t valueTable[] = {
     { "gov_collective_ff_weight",   VAR_UINT8  |  PROFILE_VALUE,  .config.minmaxUnsigned = { 0, 250 }, PG_PID_PROFILE, offsetof(pidProfile_t, governor.collective_ff_weight) },
     { "gov_max_throttle",           VAR_UINT8  |  PROFILE_VALUE,  .config.minmaxUnsigned = { 0, 100 }, PG_PID_PROFILE, offsetof(pidProfile_t, governor.max_throttle) },
 
+    { "flat_disk_alpha",            VAR_INT16  |  PROFILE_VALUE,  .config.minmax = { -250, 250 }/* -0.25 - +0.25 */, PG_PID_PROFILE, offsetof(pidProfile_t, flat_disk_alpha) },
+    { "flat_disk_beta",             VAR_INT16  |  PROFILE_VALUE,  .config.minmax = { -250, 250 }/* -0.25 - +0.25 */, PG_PID_PROFILE, offsetof(pidProfile_t, flat_disk_beta) },
+    { "flat_disk_gamma",            VAR_UINT8  |  PROFILE_VALUE,  .config.minmaxUnsigned = { 0, 250 }/* 0 - 2.50 */, PG_PID_PROFILE, offsetof(pidProfile_t, flat_disk_gamma) },
+    { "flat_disk_coll_max",         VAR_UINT8  |  PROFILE_VALUE,  .config.minmaxUnsigned = { 0, 100 }/* 0 - 1.00 */, PG_PID_PROFILE, offsetof(pidProfile_t, flat_disk_coll_max) },
+
 // PG_TELEMETRY_CONFIG
 #ifdef USE_TELEMETRY
     { "tlm_inverted",               VAR_UINT8  | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, telemetry_inverted) },

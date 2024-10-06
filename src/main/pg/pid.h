@@ -180,6 +180,10 @@ typedef struct pidProfile_s {
     pidRescueConfig_t   rescue;
     governorProfile_t   governor;
 
+    int16_t             flat_disk_alpha;
+    int16_t             flat_disk_beta;
+    uint8_t             flat_disk_gamma;
+    uint8_t             flat_disk_coll_max;
 } pidProfile_t;
 
 PG_DECLARE_ARRAY(pidProfile_t, PID_PROFILE_COUNT, pidProfiles);
