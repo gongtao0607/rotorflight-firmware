@@ -78,6 +78,11 @@ typedef struct {
 } pidAxisCoef_t;
 
 typedef struct {
+    float x;
+    float y;
+} pidYawHsiData_t;
+
+typedef struct {
 
     filter_t collDeflectionFilter;
     filter_t pitchDeflectionFilter;
@@ -137,6 +142,10 @@ typedef struct pid_s {
 
     order1Filter_t crossCouplingFilter[XY_AXIS_COUNT];
 
+    float yawHsiGain;
+    float yawHsiBleedTime;
+    float yawHsiDecayTime;
+    pidYawHsiData_t yawHsiData;
 } pid_t;
 
 

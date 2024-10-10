@@ -1004,6 +1004,12 @@ static bool mspCommonProcessOutCommand(int16_t cmdMSP, sbuf_t *dst, mspPostProce
 #endif // USE_OSD
         break;
     }
+    case MSP_EXPERIMENTAL:
+        // Add your experimental values here
+        sbufWriteU8(dst, (uint8_t)currentPidProfile->yaw_hsi_gain);
+        sbufWriteU8(dst, currentPidProfile->yaw_hsi_bleed_time);
+        sbufWriteU8(dst, currentPidProfile->yaw_hsi_decay_time);
+        break;
 
     default:
         return false;
@@ -3522,6 +3528,14 @@ static mspResult_e mspCommonProcessInCommand(mspDescriptor_t srcDesc, int16_t cm
         }
         break;
 #endif // OSD
+
+    case MSP_SET_EXPERIMENTAL:
+        if (sbufBytesRemaining(src) >= 3) {
+            currentPidProfile->yaw_hsi_gain       = (uint16_t)sbufReadU8(src);
+            currentPidProfile->yaw_hsi_bleed_time = sbufReadU8(src);
+            currentPidProfile->yaw_hsi_decay_time = sbufReadU8(src);
+        }
+        break;
 
     default:
         return mspProcessInCommand(srcDesc, cmdMSP, src);

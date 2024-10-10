@@ -180,6 +180,9 @@ typedef struct pidProfile_s {
     pidRescueConfig_t   rescue;
     governorProfile_t   governor;
 
+    uint16_t            yaw_hsi_gain;
+    uint8_t             yaw_hsi_bleed_time;
+    uint8_t             yaw_hsi_decay_time;
 } pidProfile_t;
 
 PG_DECLARE_ARRAY(pidProfile_t, PID_PROFILE_COUNT, pidProfiles);

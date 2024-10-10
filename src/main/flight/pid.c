@@ -95,6 +95,7 @@ const pidAxisData_t * pidGetAxisData(void)
 void INIT_CODE pidReset(void)
 {
     memset(pid.data, 0, sizeof(pid.data));
+    memset(&pid.yawHsiData, 0, sizeof(pid.yawHsiData));
 }
 
 void INIT_CODE pidResetAxisError(int axis)
@@ -103,6 +104,10 @@ void INIT_CODE pidResetAxisError(int axis)
     pid.data[axis].axisError = 0;
     pid.data[axis].O = 0;
     pid.data[axis].axisOffset = 0;
+    if (axis == PID_YAW) {
+      pid.yawHsiData.x = 0;
+      pid.yawHsiData.y = 0;
+    }
 }
 
 void INIT_CODE pidResetAxisErrors(void)
@@ -113,6 +118,8 @@ void INIT_CODE pidResetAxisErrors(void)
         pid.data[axis].O = 0;
         pid.data[axis].axisOffset = 0;
     }
+    pid.yawHsiData.x = 0;
+    pid.yawHsiData.y = 0;
 }
 
 
@@ -249,6 +256,10 @@ void INIT_CODE pidInitProfile(const pidProfile_t *pidProfile)
     acroTrainerInit(pidProfile);
 #endif
     rescueInitProfile(pidProfile);
+
+    pid.yawHsiGain  = PITCH_I_TERM_SCALE * pidProfile->yaw_hsi_gain;
+    pid.yawHsiBleedTime = (pidProfile->yaw_hsi_bleed_time) ? (10.0f / pidProfile->yaw_hsi_bleed_time) : 0;
+    pid.yawHsiDecayTime = (pidProfile->yaw_hsi_decay_time) ? (10.0f / pidProfile->yaw_hsi_decay_time) : 0;
 }
 
 void INIT_CODE pidCopyProfile(uint8_t dstPidProfileIndex, uint8_t srcPidProfileIndex)
@@ -286,13 +297,20 @@ void INIT_CODE pidCopyProfile(uint8_t dstPidProfileIndex, uint8_t srcPidProfileI
 
 static inline void rotateAxisError(void)
 {
+    const float r = gyro.gyroADCf[Z] * RAD * pid.dT;
+
+    const float t = r * r / 2;
+    const float C = t * (1 - t / 6);
+    const float S = r * (1 - t / 3);
+
+    // yaw hsi rotating
+    const float x = pid.yawHsiData.x;
+    const float y = pid.yawHsiData.y;
+
+    pid.yawHsiData.x  -= x * C - y * S;
+    pid.yawHsiData.y  -= y * C + x * S;
+
     if (pid.errorRotation) {
-        const float r = gyro.gyroADCf[Z] * RAD * pid.dT;
-
-        const float t = r * r / 2;
-        const float C = t * (1 - t / 6);
-        const float S = r * (1 - t / 3);
-
         const float x = pid.data[PID_ROLL].axisError;
         const float y = pid.data[PID_PITCH].axisError;
 
@@ -1034,7 +1052,7 @@ static void pidApplyCyclicMode3(uint8_t axis, const pidProfile_t * pidProfile)
 }
 
 
-static void pidApplyYawMode3(void)
+static void pidApplyYawMode3(const pidProfile_t * pidProfile)
 {
     const uint8_t axis = FD_YAW;
 
@@ -1107,6 +1125,23 @@ static void pidApplyYawMode3(void)
     DEBUG_AXIS(ERROR_DECAY, axis, 2, errorDecay * 100);
     DEBUG_AXIS(ERROR_DECAY, axis, 3, pid.data[axis].axisError * 10);
 
+  //// Yaw HSI
+    // reuse itermDelta
+    pid.yawHsiData.x =  limitf(pid.yawHsiData.x + itermDelta, pid.errorLimit[axis]);
+    pid.data[axis].O = pid.yawHsiGain * pid.yawHsiData.x;
+
+    // Apply error bleed (.x -> axisError).
+    const float yawHsiBleed = pid.yawHsiData.x * pid.yawHsiBleedTime * pid.dT;
+    pid.yawHsiData.x -= yawHsiBleed;
+    // Need to keep the servo amount unchanged (bleed `.x * yawHsiGain` to `.axisError * Ki`)
+    if (pidProfile->pid[axis].I > 0) {
+      const float convertedYawHsiBleed = yawHsiBleed / pid.coef[axis].Ki * pid.yawHsiGain;
+      pid.data[axis].axisError = limitf(pid.data[axis].axisError + convertedYawHsiBleed, pid.errorLimit[axis]);
+    }
+
+    // Apply error decay (.y -> 0)
+    pid.yawHsiData.y -= pid.yawHsiData.y * pid.yawHsiDecayTime * pid.dT;
+
 
   //// Feedforward
 
@@ -1127,7 +1162,7 @@ static void pidApplyYawMode3(void)
 
     // Calculate sum of all terms
     pid.data[axis].pidSum = pid.data[axis].P + pid.data[axis].I + pid.data[axis].D +
-                            pid.data[axis].F + pid.data[axis].B;
+                            pid.data[axis].F + pid.data[axis].B + pid.data[axis].O;
 }
 
 
@@ -1149,7 +1184,7 @@ void pidController(const pidProfile_t *pidProfile, timeUs_t currentTimeUs)
             pidApplyCyclicMode3(PID_PITCH, pidProfile);
             pidApplyOffsetBleed(pidProfile);
             pidApplyCyclicCrossCoupling();
-            pidApplyYawMode3();
+            pidApplyYawMode3(pidProfile);
             break;
         case 2:
             pidApplyCyclicMode2(PID_ROLL);
