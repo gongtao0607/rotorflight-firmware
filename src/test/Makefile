@@ -455,6 +455,9 @@ rx_spi_expresslrs_telemetry_unittest_DEFINES := \
 		USE_GPS= \
 		USE_MSP_OVER_TELEMETRY= \
 
+sbus_output_unittest_SRC := \
+		$(USER_DIR)/drivers/sbus_output.c
+
 # Please tweak the following variable definitions as needed by your
 # project, except GTEST_HEADERS, which you can use in your own targets
 # but shouldn't modify.
@@ -504,7 +507,7 @@ ifeq ($(shell $(CC) -v 2>&1 | grep -q "clang version" && echo "clang"),clang)
 # Travis reports CC_VERSION of 4.2.1
 CC_VERSION_MAJOR := $(firstword $(subst ., ,$(CC_VERSION)))
 CC_VERSION_CHECK_MIN := 7
-CC_VERSION_CHECK_MAX := 13
+CC_VERSION_CHECK_MAX := 18
 
 # Added flags for clang 11 - 13 are not backwards compatible
 ifeq ($(shell expr $(CC_VERSION_MAJOR) \> 10 \& $(CC_VERSION_MAJOR) \< 14), 1)
