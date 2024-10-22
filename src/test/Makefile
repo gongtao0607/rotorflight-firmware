@@ -458,6 +458,10 @@ rx_spi_expresslrs_telemetry_unittest_DEFINES := \
 sbus_output_unittest_SRC := \
 		$(USER_DIR)/drivers/sbus_output.c
 
+sbus_output_unittest_INCLUDE_DIRS := \
+        $(TEST_DIR) \
+		$(USER_DIR)/common 
+
 # Please tweak the following variable definitions as needed by your
 # project, except GTEST_HEADERS, which you can use in your own targets
 # but shouldn't modify.
@@ -674,7 +678,7 @@ $(OBJECT_DIR)/gtest_main.a : $(OBJECT_DIR)/gtest-all.o $(OBJECT_DIR)/gtest_main.
 # includes in test dir must override includes in user dir, unless the user
 # specifies a list of endorsed directories in ${target}_INCLUDE_DIRS.
 test_include_dirs  = $1 $(TEST_DIR) $(USER_DIR)
-test_cflags	   = $(addprefix -I,$(call test_include_dirs,$1))
+test_cflags	   = $(addprefix -iquote,$(call test_include_dirs,$1))
 
 
 # target name extractor
