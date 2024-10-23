@@ -133,11 +133,11 @@ TEST_P(SBusOutChannelSweep, FrameConstruct) {
     EXPECT_EQ(value, value_in_frame);
 }
 
-INSTANTIATE_TEST_CASE_P(FullScaleChannelSweep, SBusOutChannelSweep,
+INSTANTIATE_TEST_SUITE_P(FullScaleChannelSweep, SBusOutChannelSweep,
                         testing::Combine(testing::Range(0, 16),
                                          testing::Range(0, (1 << 11) - 1)));
 
-INSTANTIATE_TEST_CASE_P(OnOffChannelSweep, SBusOutChannelSweep,
+INSTANTIATE_TEST_SUITE_P(OnOffChannelSweep, SBusOutChannelSweep,
                         testing::Combine(testing::Values(16, 17),
                                          testing::Values(0, 1)));
 
@@ -177,7 +177,7 @@ TEST_P(SBusOutPWMToSBusSweep, OnOffConversion) {
     EXPECT_EQ(sbus, pwm > 1500 ? 1 : 0);
 }
 
-INSTANTIATE_TEST_CASE_P(PWMConversionSweep, SBusOutPWMToSBusSweep,
+INSTANTIATE_TEST_SUITE_P(PWMConversionSweep, SBusOutPWMToSBusSweep,
                         testing::Range(1000, 2000));
 
 
