@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "types.h"
+#include "common/types.h"
 
 #define INIT_ZERO  { 0, }
 

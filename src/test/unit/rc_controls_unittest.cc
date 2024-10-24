@@ -271,7 +271,7 @@ protected:
 
     virtual void SetUp() {
         PG_RESET(rxConfig);
-        rxConfigMutable()->mincheck = DEFAULT_MIN_CHECK;
+        rxConfigMutable()->rx_pulse_min = DEFAULT_MIN_CHECK;
         rxConfigMutable()->maxcheck = DEFAULT_MAX_CHECK;
         rxConfigMutable()->midrc = 1500;
 
@@ -366,7 +366,7 @@ TEST_F(RcControlsAdjustmentsTest, processRcAdjustmentsWithRcRateFunctionSwitchUp
 
     // and
     PG_RESET(rxConfig);
-    rxConfigMutable()->mincheck = DEFAULT_MIN_CHECK;
+    rxConfigMutable()->rx_pulse_min = DEFAULT_MIN_CHECK;
     rxConfigMutable()->maxcheck = DEFAULT_MAX_CHECK;
     rxConfigMutable()->midrc = 1500;
 

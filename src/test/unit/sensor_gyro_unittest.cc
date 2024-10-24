@@ -47,7 +47,7 @@ extern "C" {
     STATIC_UNIT_TESTED bool fakeGyroRead(gyroDev_t *gyro);
 
     uint8_t debugMode;
-    int16_t debug[DEBUG16_VALUE_COUNT];
+    int32_t debug[DEBUG_VALUE_COUNT];
 }
 
 #include "unittest_macros.h"

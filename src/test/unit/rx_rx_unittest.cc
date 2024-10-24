@@ -39,7 +39,7 @@ extern "C" {
     #include "io/beeper.h"
 
     boxBitmask_t rcModeActivationMask;
-    int16_t debug[DEBUG16_VALUE_COUNT];
+    int32_t debug[DEBUG_VALUE_COUNT];
     uint8_t debugMode = 0;
     uint8_t armingFlags = 0;
 
@@ -117,7 +117,7 @@ TEST(RxTest, TestValidFlightChannelsHighArm)
     modeActivationConditionsMutable(0)->auxChannelIndex = 0;
     modeActivationConditionsMutable(0)->modeId = BOXARM;
     modeActivationConditionsMutable(0)->range.startStep = CHANNEL_VALUE_TO_STEP(1400);
-    modeActivationConditionsMutable(0)->range.endStep = CHANNEL_VALUE_TO_STEP(CHANNEL_RANGE_MAX);
+    modeActivationConditionsMutable(0)->range.endStep = CHANNEL_VALUE_TO_STEP(STEP_TO_CHANNEL_VALUE(MAX_MODE_RANGE_STEP));
 
     analyzeModeActivationConditions();
 
@@ -153,7 +153,7 @@ TEST(RxTest, TestInvalidFlightChannels)
     modeActivationConditionsMutable(0)->auxChannelIndex = 0;
     modeActivationConditionsMutable(0)->modeId = BOXARM;
     modeActivationConditionsMutable(0)->range.startStep = CHANNEL_VALUE_TO_STEP(1400);
-    modeActivationConditionsMutable(0)->range.endStep = CHANNEL_VALUE_TO_STEP(CHANNEL_RANGE_MAX);
+    modeActivationConditionsMutable(0)->range.endStep = CHANNEL_VALUE_TO_STEP(STEP_TO_CHANNEL_VALUE(MAX_MODE_RANGE_STEP));
 
     analyzeModeActivationConditions();
 

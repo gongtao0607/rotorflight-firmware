@@ -77,7 +77,7 @@ uint32_t sysTickUptime;
 void configureFailsafe(void)
 {
     rxConfigMutable()->midrc = TEST_MID_RC;
-    rxConfigMutable()->mincheck = TEST_MIN_CHECK;
+    rxConfigMutable()->rx_pulse_min = TEST_MIN_CHECK;
 
     failsafeConfigMutable()->failsafe_delay = 10; // 1 second
     failsafeConfigMutable()->failsafe_off_delay = 15; // 1.5 seconds
@@ -768,7 +768,7 @@ TEST(FlightFailsafeTest, TestFailsafeNotActivatedWhenDisarmedAndRXLossIsDetected
 extern "C" {
 float rcData[MAX_SUPPORTED_RC_CHANNEL_COUNT];
 float rcCommand[4];
-int16_t debug[DEBUG16_VALUE_COUNT];
+int32_t debug[DEBUG_VALUE_COUNT];
 uint8_t debugMode = 0;
 bool isUsingSticksToArm = true;
 

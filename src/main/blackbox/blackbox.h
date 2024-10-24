@@ -20,7 +20,8 @@
 
 #pragma once
 
-#include "types.h"
+#include "common/types.h"
+
 #include "platform.h"
 
 #include "build/build_config.h"

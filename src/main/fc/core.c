@@ -786,6 +786,7 @@ static void subTaskMotorsServosUpdate(timeUs_t currentTimeUs)
 
 static void subTaskFilterUpdate(timeUs_t currentTimeUs)
 {
+    UNUSED(currentTimeUs);
 #ifdef USE_FREQ_SENSOR
     freqUpdate();
 #endif

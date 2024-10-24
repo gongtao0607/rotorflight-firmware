@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "types.h"
+#include "common/types.h"
 #include "platform.h"
 
 #include "drivers/barometer/barometer.h"

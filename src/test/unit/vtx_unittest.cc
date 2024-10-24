@@ -66,7 +66,7 @@ extern "C" {
     uint16_t averageSystemLoadPercent = 0;
     uint8_t cliMode = 0;
     uint8_t debugMode = 0;
-    int16_t debug[DEBUG16_VALUE_COUNT];
+    int32_t debug[DEBUG_VALUE_COUNT];
     pidProfile_t *currentPidProfile;
     controlRateConfig_t *currentControlRateProfile;
     attitudeEulerAngles_t attitude;
@@ -90,7 +90,7 @@ TEST(VtxTest, PitMode)
     modeActivationConditionsMutable(0)->auxChannelIndex = 0;
     modeActivationConditionsMutable(0)->modeId = BOXVTXPITMODE;
     modeActivationConditionsMutable(0)->range.startStep = CHANNEL_VALUE_TO_STEP(1750);
-    modeActivationConditionsMutable(0)->range.endStep = CHANNEL_VALUE_TO_STEP(CHANNEL_RANGE_MAX);
+    modeActivationConditionsMutable(0)->range.endStep = CHANNEL_VALUE_TO_STEP(STEP_TO_CHANNEL_VALUE(MAX_MODE_RANGE_STEP));
 
     analyzeModeActivationConditions();
 

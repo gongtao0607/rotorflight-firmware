@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "types.h"
+#include "common/types.h"
 #include "platform.h"
 
 #include "drivers/io_types.h"
