@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "common/utils.h"
 #include "pg/feature.h"
 
 #ifndef DEFAULT_FEATURES

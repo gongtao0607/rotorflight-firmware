@@ -15,7 +15,7 @@
  * along with this software. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "types.h"
+#include "common/types.h"
 #include "platform.h"
 
 #ifdef USE_BLACKBOX

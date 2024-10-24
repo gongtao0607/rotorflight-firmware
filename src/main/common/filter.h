@@ -19,6 +19,8 @@
 
 #include <stdbool.h>
 
+#include "common/utils.h"
+
 
 #define BUTTER_Q        0.707106781f     /* 2nd order Butterworth: 1/sqrt(2) */
 #define BESSEL_Q        0.577350269f     /* 2nd order Bessel: 1/sqrt(3) */
