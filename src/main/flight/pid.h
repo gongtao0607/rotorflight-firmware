@@ -137,7 +137,7 @@ typedef struct pid_s {
 
     order1Filter_t crossCouplingFilter[XY_AXIS_COUNT];
 
-} pid_t;
+} pidData_t;
 
 
 void pidController(const pidProfile_t *pidProfile, timeUs_t currentTimeUs);

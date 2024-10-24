@@ -23,8 +23,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "platform.h"
-
 #include "pg/time.h"
 
 // time difference, 32 bits always sufficient

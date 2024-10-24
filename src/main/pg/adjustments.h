@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "types.h"
+#include "common/types.h"
 
 #include "pg/pg.h"
 #include "pg/modes.h"

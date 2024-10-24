@@ -22,7 +22,7 @@
 
 #include <stdlib.h>
 
-#include "types.h"
+#include "common/types.h"
 
 /*
  * Floating point constants
