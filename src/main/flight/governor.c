@@ -183,6 +183,9 @@ typedef struct {
     float           throttleRecoveryRate;
     float           throttleTrackingRate;
 
+    // Use Ground headspeed as target
+    bool            groundHeadSpeed;
+    filter_t        groundHeadspeedFilter;
 } govData_t;
 
 static FAST_DATA_ZERO_INIT govData_t gov;
@@ -410,6 +413,15 @@ static void govUpdateData(void)
 {
     // Update headspeed target
     gov.requestedHeadSpeed = gov.throttleInput * gov.fullHeadSpeed;
+
+    if (gov.groundHeadSpeed) {
+        const float yawRate = gyro.gyroADCf[Z];
+        float yawRPM = yawRate * 60.0f / 360.0f;
+        yawRPM = filterApply(&gov.groundHeadspeedFilter, yawRPM);
+        // Rotorhead CW -> mixerRotationSign = -1
+        // Positive yaw RPM -> increase target
+        gov.requestedHeadSpeed -= mixerRotationSign() * yawRPM;
+    }
 
     // Calculate request ratio (HS or throttle)
     if (gov.throttleInput > 0) {
@@ -1011,6 +1023,8 @@ void governorInitProfile(const pidProfile_t *pidProfile)
 
         gov.motorRPMGlitchDelta = (gov.fullHeadSpeed / gov.mainGearRatio) * GOV_HS_GLITCH_DELTA;
         gov.motorRPMGlitchLimit = (gov.fullHeadSpeed / gov.mainGearRatio) * GOV_HS_GLITCH_LIMIT;
+
+        gov.groundHeadSpeed = pidProfile->governor.ground_headspeed;
     }
 }
 
@@ -1105,6 +1119,8 @@ void governorInit(const pidProfile_t *pidProfile)
         lowpassFilterInit(&gov.motorRPMFilter, LPF_DAMPED, governorConfig()->gov_rpm_filter, gyro.targetRateHz, 0);
         lowpassFilterInit(&gov.TTAFilter, LPF_DAMPED, governorConfig()->gov_tta_filter, gyro.targetRateHz, 0);
         lowpassFilterInit(&gov.FFFilter, LPF_DAMPED, governorConfig()->gov_ff_filter, gyro.targetRateHz, 0);
+
+        lowpassFilterInit(&gov.groundHeadspeedFilter, LPF_1ST_ORDER, pidProfile->governor.ground_headspeed_cutoff, gyro.targetRateHz, 0);
 
         governorInitProfile(pidProfile);
     }
