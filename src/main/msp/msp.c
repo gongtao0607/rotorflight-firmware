@@ -1012,6 +1012,9 @@ static bool mspCommonProcessOutCommand(int16_t cmdMSP, sbuf_t *dst, mspPostProce
          * sbufWriteU8(dst, currentPidProfile->yourFancyParameterA);
          * sbufWriteU8(dst, currentPidProfile->yourFancyParameterB);
         */
+        sbufWriteU8(dst, currentPidProfile->f_reduction[PID_ROLL]);
+        sbufWriteU8(dst, currentPidProfile->f_reduction[PID_PITCH]);
+        sbufWriteU8(dst, currentPidProfile->f_reduction_cutoff);
         break;
 
     default:
@@ -3567,6 +3570,11 @@ static mspResult_e mspCommonProcessInCommand(mspDescriptor_t srcDesc, int16_t cm
          *     currentPidProfile->yourFancyParameterB = sbufReadU8(src);
          * }
         */
+        if (sbufBytesRemaining(src) >= 3) {
+            currentPidProfile->f_reduction[PID_ROLL]  = sbufReadU8(src);
+            currentPidProfile->f_reduction[PID_PITCH] = sbufReadU8(src);
+            currentPidProfile->f_reduction_cutoff = sbufReadU8(src);
+        }
         break;
 
     default:

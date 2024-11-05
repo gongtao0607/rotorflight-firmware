@@ -247,6 +247,9 @@ void INIT_CODE pidInitProfile(const pidProfile_t *pidProfile)
     acroTrainerInit(pidProfile);
 #endif
     rescueInitProfile(pidProfile);
+
+    lowpassFilterInit(&pid.f_reduction_filter[PID_ROLL], LPF_1ST_ORDER, pidProfile->f_reduction_cutoff, pid.freq, 0);
+    lowpassFilterInit(&pid.f_reduction_filter[PID_PITCH], LPF_1ST_ORDER, pidProfile->f_reduction_cutoff, pid.freq, 0);
 }
 
 void INIT_CODE pidCopyProfile(uint8_t dstPidProfileIndex, uint8_t srcPidProfileIndex)
@@ -1014,6 +1017,17 @@ static void pidApplyCyclicMode3(uint8_t axis, const pidProfile_t * pidProfile)
     // Calculate F component
     pid.data[axis].F = pid.coef[axis].Kf * setpoint;
 
+    // Experimental: reduce F term by pirouette speed
+    // The target is to reduce about ~10% for 510 deg/s rotation
+    if (axis == PID_ROLL || axis == PID_PITCH) {
+      // float piro = fabsf(pid.data[PID_YAW].gyroRate);  // Use gyroRate. Unit is degree per second
+      float piro = fabsf(pid.data[PID_YAW].setPoint);  // Use setPoint. Unit is degree per second
+      piro = filterApply(&pid.f_reduction_filter[axis], piro);
+      float reduction = pidProfile->f_reduction[axis] / 100.0f;
+      reduction *= piro / 360;
+      reduction = constrainf(reduction, 0, 0.6f);
+      pid.data[axis].F *= 1.0f - reduction;
+    }
 
   //// Feedforward Boost (FF Derivative)
 
