@@ -481,6 +481,14 @@ rx_spi_spektrum_unittest_DEFINES := \
 #		USE_MSP_OVER_TELEMETRY=
 #		USE_RX_EXPRESSLRS= \
 
+flashfs_unittest_SRC := \
+		$(USER_DIR)/io/flashfs.c \
+		$(TEST_DIR)/flashfs_unittest.include/flash_emulator.cc \
+		$(TEST_DIR)/flashfs_unittest.include/flash_c_stub.cc
+
+flashfs_unittest_DEFINES := \
+		USE_LOOP_FLASHFS=
+
 # Please tweak the following variable definitions as needed by your
 # project, except GTEST_HEADERS, which you can use in your own targets
 # but shouldn't modify.
@@ -769,6 +777,14 @@ $(OBJECT_DIR)/$1/%.c.o: $(TEST_DIR)/%.c
 	$(V1) $(CC) $(C_FLAGS) $$(call test_cflags,$$($1_INCLUDE_DIRS)) \
                 $$(foreach def,$$($1_DEFINES),-D $$(def)) \
                 -c $$< -o $$@
+
+$(OBJECT_DIR)/$1/%.cc.o: $(TEST_DIR)/%.cc
+	@echo "compiling test c file: $$<" "$(STDOUT)"
+	$(V1) mkdir -p $$(dir $$@)
+	$(V1) $(CXX) $(CXX_FLAGS) $$(call test_cflags,$$($1_INCLUDE_DIRS)) \
+                $$(foreach def,$$($1_DEFINES),-D $$(def)) \
+                -c $$< -o $$@
+
 
 ifneq ($1,$(basename $1))
 # per-target tests may compile files from the target directory
