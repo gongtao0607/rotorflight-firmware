@@ -52,7 +52,7 @@ typedef enum {
 
 static const flashPartition_t *flashPartition = NULL;
 static const flashGeometry_t *flashGeometry = NULL;
-static uint32_t flashfsSize = 0;
+STATIC_UNIT_TESTED uint32_t flashfsSize = 0;
 static flashfsState_e flashfsState = FLASHFS_IDLE;
 static flashSector_t eraseSectorCurrent = 0;
 
@@ -93,7 +93,7 @@ uint32_t checkFlashErrors = 0;
 #endif
 
 // The position of the buffer's tail in the overall flash address space:
-static uint32_t tailAddress = 0;
+STATIC_UNIT_TESTED uint32_t tailAddress = 0;
 
 static void flashfsClearBuffer(void)
 {
