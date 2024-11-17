@@ -967,6 +967,54 @@ static void pidApplyCyclicMode3(uint8_t axis, const pidProfile_t * pidProfile)
 
   //// Offset term
 
+    // Experimental: convert I to axisOffset
+    // The algorithm only makes sense if both Ki and Ko !=0;
+    if (pid.coef[axis].Ki != 0 && pid.coef[axis].Ko != 0) {
+        const float axisError = pid.data[axis].axisError;
+        const float axisOffset = pid.data[axis].axisOffset;
+        const float Ki = pid.coef[axis].Ki;
+        const float Ko = pid.coef[axis].Ko;
+
+        // 0. calculate bleed rate
+        float bleedRate = pidTableLookup(curve, pidProfile->offset_charge_curve, LOOKUP_CURVE_POINTS) * 0.08f;
+        bleedRate = copysignf(bleedRate, axisError);
+
+        // 1. offsetDelta = value to be added to axisOffset
+        float offsetDelta = bleedRate * pid.dT;
+        // 1. determin sign of offsetDelta
+        // offsetDelta is positive if bleedRate>0 && collective>0 || bleedRate<0 && collective<0
+        offsetDelta = copysignf(offsetDelta, bleedRate * collective);
+
+        // 1. Check offsetLimit
+        offsetDelta = limitf(axisOffset + offsetDelta, pid.offsetLimit[axis]) - axisOffset;
+
+        // 2. calculate equivalent output delta and errorDelta
+        // errorDelta = value to be substract from axisError.
+        // Note: 
+        //    output = axisOffset * collective * Ko
+        //    output = axisError * Ki
+        float outputDelta = collective * offsetDelta * Ko;
+        float errorDelta = outputDelta / Ki;
+
+        // 2. Check axisError limit
+        // Note: axisError and errorDelta have same sign
+        // collective == 0 -> errorDelta == 0 and we will not enter (safe)
+        if (fabsf(axisError) - fabsf(errorDelta) < 0 ) {
+            // We need to re-calculate outputDelta and offsetDelta:
+            errorDelta = axisError;
+            outputDelta = errorDelta * Ki;
+            offsetDelta = outputDelta / collective / Ko;
+        }
+
+        // 3. Update axisError and axisOffset
+        pid.data[axis].axisError -= errorDelta;
+        pid.data[axis].I -= errorDelta * Ki;
+        pid.data[axis].axisOffset += offsetDelta;
+    }
+        
+    pid.data[axis].O = pid.coef[axis].Ko * pid.data[axis].axisOffset * collective;
+
+    /*
     // Offset saturation
     const bool offSaturation = (pidAxisSaturated(axis) && pid.data[axis].axisOffset * itermErrorRate * collective > 0);
 
@@ -977,11 +1025,12 @@ static void pidApplyCyclicMode3(uint8_t axis, const pidProfile_t * pidProfile)
     // Calculate Offset component
     pid.data[axis].axisOffset = limitf(pid.data[axis].axisOffset + offDelta, pid.offsetLimit[axis]);
     pid.data[axis].O = pid.coef[axis].Ko * pid.data[axis].axisOffset * collective;
+    */
 
     DEBUG_AXIS(HS_OFFSET, axis, 0, errorRate * 10);
     DEBUG_AXIS(HS_OFFSET, axis, 1, itermErrorRate * 10);
-    DEBUG_AXIS(HS_OFFSET, axis, 2, offMod * 1000);
-    DEBUG_AXIS(HS_OFFSET, axis, 3, offDelta * 1000000);
+//    DEBUG_AXIS(HS_OFFSET, axis, 2, offMod * 1000);
+//    DEBUG_AXIS(HS_OFFSET, axis, 3, offDelta * 1000000);
     DEBUG_AXIS(HS_OFFSET, axis, 4, pid.data[axis].axisError * 10);
     DEBUG_AXIS(HS_OFFSET, axis, 5, pid.data[axis].axisOffset * 10);
     DEBUG_AXIS(HS_OFFSET, axis, 6, pid.data[axis].O * 1000);
