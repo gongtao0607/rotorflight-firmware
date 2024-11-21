@@ -235,3 +235,6 @@ bool FlashEmulator::IsValidFlashFSAddress(uint32_t address) {
 void FlashEmulator::Fill(uint32_t address, uint8_t byte, uint32_t length) {
     memset(&memory_[address], byte, length);
 }
+void FlashEmulator::FillSector(uint16_t sector, uint8_t byte, uint16_t count) {
+    memset(&memory_[sector * kSectorSize], byte, count * kSectorSize);
+}

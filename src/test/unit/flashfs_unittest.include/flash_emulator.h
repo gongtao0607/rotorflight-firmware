@@ -72,7 +72,6 @@ class FlashEmulator : public FlashInterface {
           kPagesPerSector(pages_per_sector), kSectors(sectors),
           kFlashFSStartSector(flashfs_start),
           kFlashFSSizeInSectors(flashfs_size),
-          kFlashFSSize(flashfs_size * pages_per_sector * page_size),
 
           kFlashFSPartition({.type = FLASH_PARTITION_TYPE_FLASHFS,
                              .startSector = flashfs_start,
@@ -113,8 +112,10 @@ class FlashEmulator : public FlashInterface {
     const uint32_t kSectorSize = kPageSize * kPagesPerSector;
     const uint32_t kFlashSize = kSectors * kSectorSize;
     const uint16_t kFlashFSStartSector;
+    const uint16_t kFlashFSStart = kFlashFSStartSector * kSectorSize;
     const uint16_t kFlashFSSizeInSectors;
-    const uint32_t kFlashFSSize;
+    const uint32_t kFlashFSSize = kFlashFSSizeInSectors * kSectorSize;
+    const uint32_t kFlashFSEnd = kFlashFSStart + kFlashFSSize;  // This is end+1
 
     flashPartition_t kFlashFSPartition;
     const flashGeometry_t kFlashGeometry;
@@ -142,4 +143,5 @@ class FlashEmulator : public FlashInterface {
     bool IsErased(uint32_t address, uint32_t length);
     bool IsValidFlashFSAddress(uint32_t address);
     void Fill(uint32_t address, uint8_t byte, uint32_t length);
+    void FillSector(uint16_t sector, uint8_t byte, uint16_t count);
 };
