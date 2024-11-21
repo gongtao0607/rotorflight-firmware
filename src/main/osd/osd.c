@@ -600,7 +600,7 @@ static void osdGetBlackboxStatusString(char * buff)
             const flashGeometry_t *flashGeometry = flashGetGeometry();
 
             storageTotal = ((FLASH_PARTITION_SECTOR_COUNT(flashPartition) * flashGeometry->sectorSize) / 1024);
-            storageUsed = flashfsGetOffset() / 1024;
+            storageUsed = flashfsGetUsage() / 1024;
         }
         break;
 #endif

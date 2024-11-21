@@ -491,7 +491,7 @@ static void serializeDataflashSummaryReply(sbuf_t *dst)
         sbufWriteU8(dst, flags);
         sbufWriteU32(dst, FLASH_PARTITION_SECTOR_COUNT(flashPartition));
         sbufWriteU32(dst, flashfsGetSize());
-        sbufWriteU32(dst, flashfsGetOffset()); // Effectively the current number of bytes stored on the volume
+        sbufWriteU32(dst, flashfsGetUsage()); // Effectively the current number of bytes stored on the volume
     } else
 #endif
 

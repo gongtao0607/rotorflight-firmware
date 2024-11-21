@@ -2680,7 +2680,7 @@ static void cliFlashInfo(const char *cmdName, char *cmdline)
 
     cliPrintLinef("FlashFS size=%u, usedSize=%u",
             FLASH_PARTITION_SECTOR_COUNT(flashPartition) * layout->sectorSize,
-            flashfsGetOffset()
+            flashfsGetUsage()
     );
 #endif
 }
