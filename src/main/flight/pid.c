@@ -966,7 +966,20 @@ static void pidApplyCyclicMode3(uint8_t axis, const pidProfile_t * pidProfile)
 
 
   //// Offset term
+        
+#if 1
+    // Offset saturation
+    const bool offSaturation = (pidAxisSaturated(axis) && pid.data[axis].axisOffset * itermErrorRate * collective > 0);
 
+    // Offset change modulated by collective
+    const float offMod = copysignf(pidTableLookup(curve, pidProfile->offset_charge_curve, LOOKUP_CURVE_POINTS), collective) / 100.0f;
+    const float offDelta = offSaturation ? 0 : itermErrorRate * pid.dT * offMod;
+
+    // Calculate Offset component
+    pid.data[axis].axisOffset = limitf(pid.data[axis].axisOffset + offDelta, pid.offsetLimit[axis]);
+#endif
+
+#if 1
     // Experimental: convert I to axisOffset
     // The algorithm only makes sense if both Ki and Ko !=0;
     if (pid.coef[axis].Ki != 0 && pid.coef[axis].Ko != 0) {
@@ -976,7 +989,7 @@ static void pidApplyCyclicMode3(uint8_t axis, const pidProfile_t * pidProfile)
         const float Ko = pid.coef[axis].Ko;
 
         // 0. calculate bleed rate
-        float bleedRate = pidTableLookup(curve, pidProfile->offset_charge_curve, LOOKUP_CURVE_POINTS) * 0.08f;
+        float bleedRate = pidTableLookup(curve, pidProfile->offset_charge_curve2, LOOKUP_CURVE_POINTS) * 0.08f;
         bleedRate = copysignf(bleedRate, axisError);
 
         // 1. offsetDelta = value to be added to axisOffset
@@ -1011,26 +1024,14 @@ static void pidApplyCyclicMode3(uint8_t axis, const pidProfile_t * pidProfile)
         pid.data[axis].I -= errorDelta * Ki;
         pid.data[axis].axisOffset += offsetDelta;
     }
-        
+#endif
+    
     pid.data[axis].O = pid.coef[axis].Ko * pid.data[axis].axisOffset * collective;
-
-    /*
-    // Offset saturation
-    const bool offSaturation = (pidAxisSaturated(axis) && pid.data[axis].axisOffset * itermErrorRate * collective > 0);
-
-    // Offset change modulated by collective
-    const float offMod = copysignf(pidTableLookup(curve, pidProfile->offset_charge_curve, LOOKUP_CURVE_POINTS), collective) / 100.0f;
-    const float offDelta = offSaturation ? 0 : itermErrorRate * pid.dT * offMod;
-
-    // Calculate Offset component
-    pid.data[axis].axisOffset = limitf(pid.data[axis].axisOffset + offDelta, pid.offsetLimit[axis]);
-    pid.data[axis].O = pid.coef[axis].Ko * pid.data[axis].axisOffset * collective;
-    */
 
     DEBUG_AXIS(HS_OFFSET, axis, 0, errorRate * 10);
     DEBUG_AXIS(HS_OFFSET, axis, 1, itermErrorRate * 10);
-//    DEBUG_AXIS(HS_OFFSET, axis, 2, offMod * 1000);
-//    DEBUG_AXIS(HS_OFFSET, axis, 3, offDelta * 1000000);
+    DEBUG_AXIS(HS_OFFSET, axis, 2, offMod * 1000);
+    DEBUG_AXIS(HS_OFFSET, axis, 3, offDelta * 1000000);
     DEBUG_AXIS(HS_OFFSET, axis, 4, pid.data[axis].axisError * 10);
     DEBUG_AXIS(HS_OFFSET, axis, 5, pid.data[axis].axisOffset * 10);
     DEBUG_AXIS(HS_OFFSET, axis, 6, pid.data[axis].O * 1000);

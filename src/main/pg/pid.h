@@ -181,6 +181,7 @@ typedef struct pidProfile_s {
     pidRescueConfig_t   rescue;
     governorProfile_t   governor;
 
+    uint8_t             offset_charge_curve2[LOOKUP_CURVE_POINTS];
 } pidProfile_t;
 
 PG_DECLARE_ARRAY(pidProfile_t, PID_PROFILE_COUNT, pidProfiles);
