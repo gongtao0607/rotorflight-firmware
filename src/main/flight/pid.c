@@ -419,7 +419,17 @@ static void pidApplyPrecomp(void)
     const float totalDrag = angleDrag(totalPrecomp) * pid.precomp.yawFFGain;
 
     // Apply filter
-    const float yawPrecomp = filterApply(&pid.precomp.yawPrecompFilter, totalDrag) * masterGain;
+    float yawPrecomp = filterApply(&pid.precomp.yawPrecompFilter, totalDrag) * masterGain;
+
+  //// Hsflood-to-yaw precomp
+    {
+      const float hstailFFGain = currentPidProfile->hstail_ff * exp10f(currentPidProfile->hstail_ff_e);
+      const float hstailFF = hstailFFGain * pid.data[FD_ROLL].axisOffset;
+      yawPrecomp += hstailFF;
+      if (isinff(yawPrecomp) || isnanf(yawPrecomp)) {
+        yawPrecomp = 0;
+      }
+    }
 
     // Add to YAW feedforward
     pid.data[FD_YAW].F += yawPrecomp;
