@@ -589,9 +589,12 @@ void processSmartPortTelemetry(smartPortPayload_t *payload, volatile bool *clear
             nextSendTime = micros() + 1000000;
 
             return;
+        } else {
+            // Nothing pending. Reset nextSendTime.
+            nextSendTime = micros() - 1;
         }
 
-        if (nextSendTime != 0 && (cmpTimeUs(micros(), nextSendTime) <= 0)) {
+        if (cmpTimeUs(micros(), nextSendTime) <= 0) {
             // Don't send sensor data now. This will improve the reception of the MSP message.
             return;
         }
