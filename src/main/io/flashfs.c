@@ -33,7 +33,7 @@
  */
 
 /**
- * With LOOP_FLASHFS enabled, the data stream will be wrapped. Flashfs will
+ * With USE_FLASHFS_LOOP enabled, the data stream will be wrapped. Flashfs will
  * keep at least 1 page free to identify the stream start and stream end.
  * It also provides 2 maintenance functions to auto erase sectors from stream
  * start upon demand.
@@ -51,6 +51,8 @@
 #include "drivers/light_led.h"
 
 #include "io/flashfs.h"
+
+#include "pg/flashfs.h"
 
 typedef enum {
     FLASHFS_IDLE,
@@ -103,6 +105,14 @@ uint32_t checkFlashErrors = 0;
 STATIC_UNIT_TESTED uint32_t headAddress = 0;
 // The position of the buffer's tail in the overall flash address space:
 STATIC_UNIT_TESTED uint32_t tailAddress = 0;
+
+static inline uint32_t flashfsRelToAbs(uint32_t offset) {
+    return (headAddress + offset) % flashfsSize;
+}
+
+static inline uint32_t flashfsAddressShift(uint32_t address, int32_t offset) {
+    return (address + offset + flashfsSize) % flashfsSize;
+}
 
 static void flashfsClearBuffer(void)
 {
@@ -442,6 +452,13 @@ void flashfsSeekAbs(uint32_t offset)
 {
     flashfsFlushSync();
 
+    flashfsSetTailAddress((offset + headAddress) % flashfsSize);
+}
+
+void flashfsSeekPhysical(uint32_t offset)
+{
+    flashfsFlushSync();
+
     flashfsSetTailAddress(offset);
 }
 
@@ -476,11 +493,11 @@ void flashfsWrite(const uint8_t *data, unsigned int len)
 }
 
 /**
- * Read `len` bytes from the given address into the supplied buffer.
+ * Read `len` bytes from the given physical address into the supplied buffer.
  *
  * Returns the number of bytes actually read which may be less than that requested.
  */
-int flashfsReadAbs(uint32_t address, uint8_t *buffer, unsigned int len)
+int flashfsReadPhysical(uint32_t address, uint8_t *buffer, unsigned int len)
 {
     int bytesRead;
 
@@ -494,6 +511,32 @@ int flashfsReadAbs(uint32_t address, uint8_t *buffer, unsigned int len)
     flashfsFlushSync();
 
     bytesRead = flashReadBytes(address, buffer, len);
+
+    return bytesRead;
+}
+
+/**
+ * Read `len` bytes from the given address into the supplied buffer.
+ *
+ * Returns the number of bytes actually read which may be less than that requested.
+ */
+int flashfsReadAbs(uint32_t address, uint8_t *buffer, unsigned int len)
+{
+    uint32_t address1 = flashfsRelToAbs(address), address2 = 0;
+    uint16_t len1 = len, len2 = 0;
+    int bytesRead;
+
+    // Did caller try to read past the end of the volume?
+    if (address1 + len1 > flashfsSize) {
+        // Truncate their request
+        len1 = flashfsSize - address;
+        len2 = len - len1;
+    }
+
+    flashfsFlushSync();
+
+    bytesRead = flashReadBytes(address1, buffer, len1);
+    bytesRead += flashReadBytes(address2, buffer + len1, len2);
 
     return bytesRead;
 }
@@ -525,7 +568,8 @@ static bool flashfsIsPageErased(uint32_t address){
 }
 
 /**
- * Find the offset of the start of the free space on the device (or the size of the device if it is full).
+ * Find the absolute address of the start of the free space on the device.
+ * `headAddress` must be setup prior to this function.
  */
 int flashfsIdentifyStartOfFreeSpace(void)
 {
@@ -538,13 +582,12 @@ int flashfsIdentifyStartOfFreeSpace(void)
      * bandwidth and block more often.
      */
 
-    // headAddress must be setup prior to this function.
 
     const uint16_t pageSize = flashGeometry->pageSize;
 
     int left = 0; // Smallest page index in the search region
     int right = flashfsSize / pageSize; // One past the largest page index in the search region
-#ifdef USE_LOOP_FLASHFS
+#ifdef USE_FLASHFS_LOOP
     right--; 
     // We must leave one empty page to:
     //  1. identify empty space
@@ -577,7 +620,7 @@ int flashfsIdentifyStartOfFreeSpace(void)
  */
 bool flashfsIsEOF(void)
 {
-#ifdef USE_LOOP_FLASHFS
+#ifdef USE_FLASHFS_LOOP
     // In case of using LOOP_FLASHFS, we need 
     //  * 1 free page before a sector to identify boundary.
     //  * +flashfs buffer size to avoid writing to that 1 free page.
@@ -597,15 +640,21 @@ void flashfsClose(void)
         case FLASH_TYPE_NAND:
             flashFlush();
             /* FALL THROUGH */
-        case FLASH_TYPE_NOR:
+        case FLASH_TYPE_NOR: {
             flashfsClearBuffer();
-            headAddress = 0;
-            flashfsSetTailAddress((tailAddress + 2047) & ~2047);
+
+            uint32_t padding =
+                flashGeometry->pageSize - tailAddress % flashGeometry->pageSize;
+            flashfsSetTailAddress(flashfsAddressShift(tailAddress, padding));
             break;
+        }
     }
 }
 
-uint32_t flashfsIdentifyStart() {
+/*
+ * Locate the start (abs-) address of the used space. Return 0 if all space are unused
+ */
+uint32_t flashfsIdentifyStartOfUsedSpace() {
     // Locate the boundary between erased and filled.
     // This can only be at the sector boundary.
 
@@ -639,12 +688,12 @@ void flashfsInit(void)
 
     flashfsSize = FLASH_PARTITION_SECTOR_COUNT(flashPartition) * flashGeometry->sectorSize;
 
-#ifdef USE_LOOP_FLASHFS
-    headAddress = flashfsIdentifyStart();
+#ifdef USE_FLASHFS_LOOP
+    headAddress = flashfsIdentifyStartOfUsedSpace();
 #endif
 
     // Start the file pointer off at the beginning of free space so caller can start writing immediately
-    flashfsSeekAbs(flashfsIdentifyStartOfFreeSpace());
+    flashfsSeekPhysical(flashfsIdentifyStartOfFreeSpace());
 }
 
 #ifdef USE_FLASH_TOOLS
@@ -654,7 +703,7 @@ bool flashfsVerifyEntireFlash(void)
     flashfsInit();
 
     uint32_t address = 0;
-    flashfsSeekAbs(address);
+    flashfsSeekPhysical(address);
 
     const int bufferSize = 32;
     char buffer[bufferSize + 1];
@@ -670,14 +719,14 @@ bool flashfsVerifyEntireFlash(void)
 
     char expectedBuffer[bufferSize + 1];
 
-    flashfsSeekAbs(0);
+    flashfsSeekPhysical(0);
 
     int verificationFailures = 0;
     for (address = 0; address < testLimit; address += bufferSize) {
         tfp_sprintf(expectedBuffer, "%08x >> **0123456789ABCDEF**", address);
 
         memset(buffer, 0, sizeof(buffer));
-        int bytesRead = flashfsReadAbs(address, (uint8_t *)buffer, bufferSize);
+        int bytesRead = flashfsReadPhysical(address, (uint8_t *)buffer, bufferSize);
 
         int result = strncmp(buffer, expectedBuffer, bufferSize);
         if (result != 0 || bytesRead != bufferSize) {
@@ -687,3 +736,38 @@ bool flashfsVerifyEntireFlash(void)
     return verificationFailures == 0;
 }
 #endif // USE_FLASH_TOOLS
+
+#ifdef USE_FLASHFS_LOOP
+void flashfsLoopArmingErase()
+{
+    const int32_t bytesNeeded =
+        flashfsGetOffset() + flashfsConfig()->armingEraseFreeSpace - flashfsSize;
+
+    if (bytesNeeded <= 0) {
+        return;
+    }
+    const uint32_t sectorSize = flashGeometry->sectorSize;
+    const uint16_t blocksToErase = (bytesNeeded + sectorSize - 1) / sectorSize;
+
+    for (int i = 0; i < blocksToErase; i++) {
+        const uint32_t sectorAddress =
+            (headAddress + i * flashGeometry->sectorSize) % flashfsSize;
+        flashEraseSector(sectorAddress);
+        while (!flashIsReady())
+            ;
+    }
+
+    headAddress =
+        (headAddress + blocksToErase * flashGeometry->sectorSize) % flashfsSize;
+}
+#endif
+
+uint32_t flashfsGetHeadAddress()
+{
+    return headAddress;
+}
+
+uint32_t flashfsGetTailAddress()
+{
+    return tailAddress;
+}

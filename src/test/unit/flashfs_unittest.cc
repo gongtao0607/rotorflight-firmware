@@ -22,6 +22,7 @@
 
 extern "C" {
 #include "io/flashfs.h"
+#include "pg/flashfs.h"
 
 extern uint32_t flashfsSize;
 extern uint32_t headAddress;
@@ -37,20 +38,29 @@ extern uint32_t tailAddress;
 #include "gtest/gtest.h"
 
 /*
- * There are some wired logic behind flashfs.c and flash.c. This unittest is
+ * There are some weird logic behind flashfs.c and flash.c. This unittest is
  * written to accomedate them
  *   * flashfs (and some other places) assumes the "flashfs" partition starts
  *     from sector 0. This is made true by the partition allocator.
  *   * flashfs can't handle EOF gracefully if writes are not aligned to
- *     BLOCK_SIZE.
- *   * ProgramBegin() ProgramContinue() ProgramFinish() aren't page aligned.
- * (need verify)
+ *     BLOCK_SIZE (e.g., flashfs will attempt to write over EOF).
+ *   * ProgramBegin() ProgramContinue() ProgramFinish() aren't page-align
+ *     checked.
  *
  */
+
+void pgReset(void) {
+    // We will use the real config variable
+    extern flashfsConfig_t pgResetTemplate_flashfsConfig;
+    memcpy(flashfsConfigMutable(), &pgResetTemplate_flashfsConfig,
+           sizeof(flashfsConfig_t));
+}
+
 class FlashFSTestBase : public ::testing::Test {
   public:
     void SetUp() override
     {
+        pgReset();
         flash_emulator_ = std::make_shared<FlashEmulator>();
         g_flash_stub = flash_emulator_;
         page_size_ = flash_emulator_->kPageSize;
@@ -138,6 +148,7 @@ class FlashFSBandwidthTest
   public:
     void SetUp() override
     {
+        pgReset();
         // Create 64KiB flash emulator
         flash_emulator_ =
             std::make_shared<FlashEmulator>(GetParam(), 2048, 4, 8, 0, 8);
@@ -194,23 +205,23 @@ TEST_F(FlashFSLoopTest, StartFromZero)
 
     // Fill sector 0 and begining of sector 1
     flash_emulator_->FillSector(flash_emulator_->kFlashFSStartSector, 0x55, 1);
-    flash_emulator_->Fill(flash_emulator_->kSectorSize, 0x55, 5);
+    flash_emulator_->Fill(sector_size_, 0x55, 5);
     flashfsInit();
     EXPECT_EQ(headAddress, 0);
-    EXPECT_EQ(tailAddress, flash_emulator_->kSectorSize + page_size_);
+    EXPECT_EQ(tailAddress, sector_size_ + page_size_);
 }
 
 TEST_F(FlashFSLoopTest, Flat)
 {
     // Test when data stripe is not wrapped.
     // Fill sector 1 and 2.
-    flash_emulator_->Fill(1 * flash_emulator_->kSectorSize, 0x55,
-                          flash_emulator_->kSectorSize);
-    flash_emulator_->Fill(2 * flash_emulator_->kSectorSize, 0x55, 5);
+    flash_emulator_->Fill(1 * sector_size_, 0x55,
+                          sector_size_);
+    flash_emulator_->Fill(2 * sector_size_, 0x55, 5);
 
     flashfsInit();
-    EXPECT_EQ(headAddress, flash_emulator_->kSectorSize);
-    EXPECT_EQ(tailAddress, 2 * flash_emulator_->kSectorSize + page_size_);
+    EXPECT_EQ(headAddress, sector_size_);
+    EXPECT_EQ(tailAddress, 2 * sector_size_ + page_size_);
 }
 
 TEST_F(FlashFSLoopTest, Wrapped1)
@@ -220,11 +231,11 @@ TEST_F(FlashFSLoopTest, Wrapped1)
     const uint32_t kStartOfLastSector =
         (flash_emulator_->kFlashFSStartSector +
          flash_emulator_->kFlashFSSizeInSectors - 1) *
-        flash_emulator_->kSectorSize;
+        sector_size_;
 
     flash_emulator_->Fill(0, 0x55, 5);
     flash_emulator_->Fill(kStartOfLastSector, 0x55,
-                          flash_emulator_->kSectorSize);
+                          sector_size_);
 
     flashfsInit();
     EXPECT_EQ(headAddress, kStartOfLastSector);
@@ -235,12 +246,12 @@ TEST_F(FlashFSLoopTest, Wrapped2)
 {
     // Test when data region is wrapped.
     // Fill all sectors except 0.
-    flash_emulator_->Fill(flash_emulator_->kSectorSize, 0x55,
+    flash_emulator_->Fill(sector_size_, 0x55,
                           flash_emulator_->kFlashFSSize -
-                              flash_emulator_->kSectorSize);
+                              sector_size_);
 
     flashfsInit();
-    EXPECT_EQ(headAddress, flash_emulator_->kSectorSize);
+    EXPECT_EQ(headAddress, sector_size_);
     EXPECT_EQ(tailAddress, 0);
 }
 
@@ -250,8 +261,8 @@ TEST_F(FlashFSLoopTest, Wrapped3)
 
     const uint16_t kBoundarySector = 4;
     const uint32_t kEmptyStart =
-        kBoundarySector * flash_emulator_->kSectorSize - page_size_;
-    const uint32_t kEmptyStop = kBoundarySector * flash_emulator_->kSectorSize;
+        kBoundarySector * sector_size_ - page_size_;
+    const uint32_t kEmptyStop = kBoundarySector * sector_size_;
 
     // Fill all sectors except [kEmptyStart, kEmptyStop). The size = 1 page.
     flash_emulator_->Fill(flash_emulator_->kFlashFSStart, 0x55,
@@ -283,4 +294,60 @@ TEST_F(FlashFSLoopTest, Full)
     EXPECT_EQ(headAddress, 0);
     EXPECT_EQ(tailAddress, flash_emulator_->kFlashFSSize - page_size_);
     EXPECT_TRUE(flashfsIsEOF());
+}
+
+class FlashFSLoopArmingEraseTest : public FlashFSTestBase {};
+
+TEST_F(FlashFSLoopArmingEraseTest, Normal)
+{
+    // Arming erase happens in the contiguous area.
+    const uint16_t kBoundarySector = 4;
+    const uint32_t kEmptyStart =
+        kBoundarySector * sector_size_ - page_size_;
+    const uint32_t kEmptyStop = kBoundarySector * sector_size_;
+
+    // Fill all sectors except [kEmptyStart, kEmptyStop). The size = 1 page.
+    flash_emulator_->Fill(flash_emulator_->kFlashFSStart, 0x55,
+                          kEmptyStart - flash_emulator_->kFlashFSStart);
+    flash_emulator_->Fill(kEmptyStop, 0x55,
+                          flash_emulator_->kFlashFSEnd - kEmptyStop);
+
+    flashfsInit();
+    EXPECT_EQ(headAddress, kEmptyStop);
+    EXPECT_EQ(tailAddress, kEmptyStart);
+
+    // Now let's try to auto erase
+    flashfsConfigMutable()->armingEraseFreeSpace = sector_size_ * 2;
+    flashfsLoopArmingErase();
+
+    EXPECT_EQ(headAddress, kEmptyStop + sector_size_ * 2);
+    EXPECT_TRUE(flash_emulator_->IsErased(kEmptyStop, sector_size_ * 2));
+}
+
+TEST_F(FlashFSLoopArmingEraseTest, Wrapped)
+{
+    // Arming erase happens in the wrap boundary -- the last sector and the
+    // first sector.
+    const uint16_t kBoundarySector = flash_emulator_->kFlashFSSizeInSectors - 1;
+    const uint32_t kEmptyStart = kBoundarySector * sector_size_ - page_size_;
+    const uint32_t kEmptyStop = kBoundarySector * sector_size_;
+
+    // Fill all sectors except [kEmptyStart, kEmptyStop). The size = 1 page.
+    flash_emulator_->Fill(flash_emulator_->kFlashFSStart, 0x55,
+                          kEmptyStart - flash_emulator_->kFlashFSStart);
+    flash_emulator_->Fill(kEmptyStop, 0x55,
+                          flash_emulator_->kFlashFSEnd - kEmptyStop);
+
+    flashfsInit();
+    EXPECT_EQ(headAddress, kEmptyStop);
+    EXPECT_EQ(tailAddress, kEmptyStart);
+
+    // Now let's try to auto erase
+    flashfsConfigMutable()->armingEraseFreeSpace = sector_size_ * 2;
+    flashfsLoopArmingErase();
+
+    // wrapped kEmptyStop + sector_size_ * 2
+    EXPECT_EQ(headAddress, sector_size_);  
+    EXPECT_TRUE(flash_emulator_->IsErased(kEmptyStop, sector_size_));
+    EXPECT_TRUE(flash_emulator_->IsErased(0, sector_size_));
 }

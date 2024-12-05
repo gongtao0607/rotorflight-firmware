@@ -110,6 +110,7 @@
 
 #include "core.h"
 
+#include "io/flashfs.h"
 
 enum {
     ALIGN_GYRO = 0,
@@ -454,6 +455,10 @@ void tryArm(void)
     if (armingConfig()->gyro_cal_on_first_arm) {
         gyroStartCalibration(true);
     }
+
+#ifdef USE_FLASHFS_LOOP
+    flashfsLoopArmingErase();
+#endif
 
     updateArmingStatus();
 

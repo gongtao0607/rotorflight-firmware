@@ -490,11 +490,12 @@ sbus_output_unittest_DEFINES := \
 
 flashfs_unittest_SRC := \
 		$(USER_DIR)/io/flashfs.c \
+		$(USER_DIR)/pg/flashfs.c \
 		$(TEST_DIR)/flashfs_unittest.include/flash_emulator.cc \
 		$(TEST_DIR)/flashfs_unittest.include/flash_c_stub.cc
 
 flashfs_unittest_DEFINES := \
-		USE_LOOP_FLASHFS=
+		USE_FLASHFS_LOOP=
 
 # Please tweak the following variable definitions as needed by your
 # project, except GTEST_HEADERS, which you can use in your own targets
@@ -567,7 +568,7 @@ $(info CC version: $(shell $(CC) --version))
 $(info CXX version: $(shell $(CXX) --version))
 
 USE_PTHREAD = YES
-USE_COVERAGE = YES
+#USE_COVERAGE = YES
 ifeq ($(OSFAMILY), macosx)
 	USE_PTHREAD =
 endif
