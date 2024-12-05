@@ -2682,8 +2682,24 @@ static void cliFlashInfo(const char *cmdName, char *cmdline)
             FLASH_PARTITION_SECTOR_COUNT(flashPartition) * layout->sectorSize,
             flashfsGetOffset()
     );
+    cliPrintLinef("FlashFSLoop Head = 0x%08x, Tail = 0x%08x",
+            flashfsGetHeadAddress(),
+            flashfsGetTailAddress());
 #endif
 }
+
+#ifdef USE_FLASHFS_LOOP
+static void cliFlashLoopArmingErase(const char *cmdName, char *cmdline)
+{
+    UNUSED(cmdName);
+    UNUSED(cmdline);
+    flashfsLoopArmingErase();
+    cliPrintLinef("FlashFSLoop Arming Erase Done.");
+    cliPrintLinef("FlashFSLoop Head = 0x%08x, Tail = 0x%08x",
+            flashfsGetHeadAddress(),
+            flashfsGetTailAddress());
+}
+#endif
 
 
 static void cliFlashErase(const char *cmdName, char *cmdline)
@@ -2744,7 +2760,7 @@ static void cliFlashWrite(const char *cmdName, char *cmdline)
     if (!text) {
         cliShowInvalidArgumentCountError(cmdName);
     } else {
-        flashfsSeekAbs(address);
+        flashfsSeekPhysical(address);
         flashfsWrite((uint8_t*)text, strlen(text));
         flashfsFlushSync();
 
@@ -2767,7 +2783,7 @@ static void cliFlashRead(const char *cmdName, char *cmdline)
 
         uint8_t buffer[32];
         while (length > 0) {
-            int bytesRead = flashfsReadAbs(address, buffer, length < sizeof(buffer) ? length : sizeof(buffer));
+            int bytesRead = flashfsReadPhysical(address, buffer, length < sizeof(buffer) ? length : sizeof(buffer));
 
             for (int i = 0; i < bytesRead; i++) {
                 cliWrite(buffer[i]);
@@ -6426,6 +6442,9 @@ const clicmd_t cmdTable[] = {
 #ifdef USE_FLASHFS
     CLI_COMMAND_DEF("flash_erase", "erase flash chip", NULL, cliFlashErase),
     CLI_COMMAND_DEF("flash_info", "show flash chip info", NULL, cliFlashInfo),
+#ifdef USE_FLASHFS_LOOP
+    CLI_COMMAND_DEF("flash_loop_arming_erase", NULL, NULL, cliFlashLoopArmingErase),
+#endif
 #ifdef USE_FLASH_TOOLS
     CLI_COMMAND_DEF("flash_read", NULL, "<length> <address>", cliFlashRead),
     CLI_COMMAND_DEF("flash_scan", "scan flash device for errors", NULL, cliFlashVerify),

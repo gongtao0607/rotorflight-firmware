@@ -42,9 +42,12 @@ bool FlashEmulator::flashWaitForReady(void) {
     return true;
 }
 void FlashEmulator::flashEraseSector(uint32_t address) {
+    // Both w25n01g driver and w25q128fv driver wait for idle here.
+    // The logic behind m25p16 driver is unclear.
+    flashWaitForReady();
     assert(flash_state_ == kFlashStateIdle);
     flash_state_ = kFlashStateErasing;
-    std::thread erase_thread([&]() {
+    std::thread erase_thread([&, address]() {
         // Wait for erase time
         switch (kFlashType) {
         case kFlashW25N01G:
