@@ -35,12 +35,12 @@ int flashfsIdentifyStartOfFreeSpace(void);
 struct flashGeometry_s;
 const struct flashGeometry_s* flashfsGetGeometry(void);
 
-void flashfsSeekAbs(uint32_t offset);
+void flashfsSeekPhysical(uint32_t offset);
 
 void flashfsWriteByte(uint8_t byte);
 void flashfsWrite(const uint8_t *data, unsigned int len);
 
-int flashfsReadAbs(uint32_t offset, uint8_t *data, unsigned int len);
+int flashfsReadPhysical(uint32_t offset, uint8_t *data, unsigned int len);
 
 bool flashfsFlushAsync(void);
 void flashfsFlushSync(void);
@@ -55,3 +55,12 @@ bool flashfsIsEOF(void);
 
 bool flashfsVerifyEntireFlash(void);
 
+#ifdef USE_FLASHFS_LOOP
+void flashfsLoopArmingErase();
+#endif
+
+int flashfsReadAbs(uint32_t offset, uint8_t *data, unsigned int len);
+void flashfsSeekAbs(uint32_t offset);
+
+uint32_t flashfsGetHeadAddress();
+uint32_t flashfsGetTailAddress();
