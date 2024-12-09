@@ -129,8 +129,6 @@ void resetPidProfile(pidProfile_t *pidProfile)
         .hsflood_curve = { 0,0,100,150,220,220,220,220,220,220,220,220,220,220,220,220 },
         .hsflood_relax_level = 40,
         .hsflood_relax_cutoff = 10,
-        .hstail_ff = 0,
-        .hstail_ff_e = 0,
     );
 }
 

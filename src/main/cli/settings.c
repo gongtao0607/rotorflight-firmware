@@ -1139,9 +1139,6 @@ const clivalue_t valueTable[] = {
     { "hsflood_relax_level",        VAR_UINT8 | PROFILE_VALUE, .config.minmaxUnsigned = { 10, 250 }, PG_PID_PROFILE, offsetof(pidProfile_t, hsflood_relax_level) },
     { "hsflood_relax_cutoff",       VAR_UINT8 | PROFILE_VALUE, .config.minmaxUnsigned = { 1, 100 }, PG_PID_PROFILE, offsetof(pidProfile_t, hsflood_relax_cutoff) },
 
-    { "hstail_ff",                  VAR_INT8 | PROFILE_VALUE, .config.minmax = { -128, 127 }, PG_PID_PROFILE, offsetof(pidProfile_t, hstail_ff) },
-    { "hstail_ff_e",                VAR_INT8 | PROFILE_VALUE, .config.minmax = { -38, 38 }, PG_PID_PROFILE, offsetof(pidProfile_t, hstail_ff_e) },
-
     { "iterm_relax_type",           VAR_UINT8  | PROFILE_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_ITERM_RELAX_TYPE }, PG_PID_PROFILE, offsetof(pidProfile_t, iterm_relax_type) },
     { "iterm_relax_level",          VAR_UINT8  | PROFILE_VALUE | MODE_ARRAY, .config.array.length = 3, PG_PID_PROFILE, offsetof(pidProfile_t, iterm_relax_level) },
     { "iterm_relax_cutoff",         VAR_UINT8  | PROFILE_VALUE | MODE_ARRAY, .config.array.length = 3, PG_PID_PROFILE, offsetof(pidProfile_t, iterm_relax_cutoff) },

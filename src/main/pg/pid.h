@@ -184,9 +184,6 @@ typedef struct pidProfile_s {
     uint8_t             hsflood_curve[LOOKUP_CURVE_POINTS];
     uint8_t             hsflood_relax_level;
     uint8_t             hsflood_relax_cutoff;
-
-    int8_t              hstail_ff;
-    int8_t              hstail_ff_e;
 } pidProfile_t;
 
 PG_DECLARE_ARRAY(pidProfile_t, PID_PROFILE_COUNT, pidProfiles);

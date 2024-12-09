@@ -1014,8 +1014,6 @@ static bool mspCommonProcessOutCommand(int16_t cmdMSP, sbuf_t *dst, mspPostProce
         */
         sbufWriteU8(dst, currentPidProfile->hsflood_relax_level);
         sbufWriteU8(dst, currentPidProfile->hsflood_relax_cutoff);
-        sbufWriteS8(dst, currentPidProfile->hstail_ff);
-        sbufWriteS8(dst, currentPidProfile->hstail_ff_e);
         break;
 
     default:
@@ -3571,11 +3569,9 @@ static mspResult_e mspCommonProcessInCommand(mspDescriptor_t srcDesc, int16_t cm
          *     currentPidProfile->yourFancyParameterB = sbufReadU8(src);
          * }
         */
-        if (sbufBytesRemaining(src) >= 4) {
+        if (sbufBytesRemaining(src) >= 2) {
             currentPidProfile->hsflood_relax_level = sbufReadU8(src);
             currentPidProfile->hsflood_relax_cutoff = sbufReadU8(src);
-            currentPidProfile->hstail_ff = sbufReadS8(src);
-            currentPidProfile->hstail_ff_e = sbufReadS8(src);
         }
         break;
 
