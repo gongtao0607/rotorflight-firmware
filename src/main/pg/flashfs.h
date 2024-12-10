@@ -26,6 +26,7 @@
 
 typedef struct flashfsConfig_s {
     uint32_t armingEraseFreeSpace;
+    uint8_t onlineErase;
 } flashfsConfig_t;
 
 PG_DECLARE(flashfsConfig_t, flashfsConfig);
