@@ -54,10 +54,13 @@
 
 #include "pg/flashfs.h"
 
+#include "blackbox/blackbox.h"
+
 typedef enum {
     FLASHFS_IDLE,
     FLASHFS_ALL_ERASING,
     FLASHFS_ARMING_ERASING,
+    FLASHFS_ONLINE_ERASING,
 } flashfsState_e;
 
 static const flashPartition_t *flashPartition = NULL;
@@ -66,6 +69,7 @@ STATIC_UNIT_TESTED uint32_t flashfsSize = 0;
 static flashfsState_e flashfsState = FLASHFS_IDLE;
 static flashSector_t eraseSectorCurrent = 0;
 static uint16_t armingEraseSectors = 0;
+static uint16_t onlineEraseSectors = 0;
 
 static DMA_DATA_ZERO_INIT uint8_t flashWriteBuffer[FLASHFS_WRITE_BUFFER_SIZE];
 
@@ -259,6 +263,13 @@ void flashfsWriteCallback(uint32_t arg)
 
     // Mark that data has been written from the buffer
     dataWritten = true;
+
+    // Check if (marking) online erase is needed
+    const uint32_t freeSpace = flashfsSize - flashfsGetOffset();
+    if (flashfsConfig()->onlineErase && freeSpace < flashGeometry->sectorSize) {
+        flashfsState = FLASHFS_ONLINE_ERASING;
+        onlineEraseSectors = 1;
+    }
 }
 
 static uint32_t flashfsWriteBuffers(uint8_t const **buffers, uint32_t *bufferSizes, int bufferCount, bool sync)
@@ -450,6 +461,18 @@ void flashfsEraseAsync(void)
                 LED1_TOGGLE;
             } else {
                 flashfsState = FLASHFS_IDLE;
+                LED1_OFF;
+            }
+        } else if (flashfsState == FLASHFS_ONLINE_ERASING) {
+            if (onlineEraseSectors > 0) {
+                blackboxLogCustomString("Erase");
+                flashEraseSector(headAddress);
+                onlineEraseSectors--;
+                headAddress = (headAddress + flashGeometry->sectorSize) % flashfsSize;
+                LED1_TOGGLE;
+            } else {
+                flashfsState = FLASHFS_IDLE;
+                blackboxLogCustomString("Done");
                 LED1_OFF;
             }
             

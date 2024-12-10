@@ -37,6 +37,8 @@ extern uint32_t tailAddress;
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include <thread>
+
 /*
  * There are some weird logic behind flashfs.c and flash.c. This unittest is
  * written to accomedate them
@@ -371,7 +373,28 @@ TEST_F(FlashFSLoopTest, WrappedRead)
     }
 }
 
-class FlashFSLoopArmingEraseTest : public FlashFSTestBase {};
+class FlashFSLoopArmingEraseTest : public FlashFSTestBase {
+    // In this test, flashfsEraseAsync() has to run in the background
+    void SetUp() override {
+        FlashFSTestBase::SetUp();
+        flashfs_task_thread_ = std::make_unique<std::thread>([&] () {
+            while(!flashfs_task_thread_exit_flag_) {
+                flashfsEraseAsync();
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+        });
+    }
+    void TearDown() override {
+
+        flashfs_task_thread_exit_flag_ = true;
+        flashfs_task_thread_->join();
+        
+        FlashFSTestBase::TearDown();
+    }
+
+    std::unique_ptr<std::thread> flashfs_task_thread_;
+    bool flashfs_task_thread_exit_flag_ = false;
+};
 
 TEST_F(FlashFSLoopArmingEraseTest, Normal)
 {
@@ -394,9 +417,8 @@ TEST_F(FlashFSLoopArmingEraseTest, Normal)
     // Now let's try to auto erase
     flashfsConfigMutable()->armingEraseFreeSpace = sector_size_ * 2;
     flashfsLoopArmingErase();
-    while(!flashfsIsReady()) {
-        flashfsEraseAsync();
-    }
+
+    while(!flashfsIsReady());
 
     EXPECT_EQ(headAddress, kEmptyStop + sector_size_ * 2);
     EXPECT_TRUE(flash_emulator_->IsErased(kEmptyStop, sector_size_ * 2));
@@ -423,12 +445,41 @@ TEST_F(FlashFSLoopArmingEraseTest, Wrapped)
     // Now let's try to auto erase
     flashfsConfigMutable()->armingEraseFreeSpace = sector_size_ * 2;
     flashfsLoopArmingErase();
-    while(!flashfsIsReady()) {
-        flashfsEraseAsync();
-    }
+    while(!flashfsIsReady());
 
     // wrapped kEmptyStop + sector_size_ * 2
     EXPECT_EQ(headAddress, sector_size_);  
     EXPECT_TRUE(flash_emulator_->IsErased(kEmptyStop, sector_size_));
     EXPECT_TRUE(flash_emulator_->IsErased(0, sector_size_));
+}
+
+class FlashFSLoopOnlineEraseTest : public FlashFSLoopArmingEraseTest { };
+
+TEST_F(FlashFSLoopOnlineEraseTest, flashfsWriteOverFlashSize)
+{
+    flashfsInit();
+    flashfsConfigMutable()->onlineErase = true;
+
+    constexpr uint32_t kBufferSize = 128;
+    constexpr uint8_t kByte = 0x44;
+    auto buffer = std::make_unique<uint8_t[]>(kBufferSize);
+    memset(buffer.get(), kByte, kBufferSize);
+
+    EXPECT_EQ(tailAddress, 0);
+
+    uint32_t written = 0;
+    do {
+        flashfsWrite(buffer.get(), kBufferSize);
+        flashfsFlushSync();
+        written += kBufferSize;
+    } while (written <= flash_emulator_->kFlashFSSize * 2);
+
+    // If LOOP_FLASHFS is enabled, we don't write the last page + maybe flashfs
+    // write buffer size.
+    for (uint32_t i = 0; i < flash_emulator_->kFlashFSSize - page_size_ -
+                                 FLASHFS_WRITE_BUFFER_SIZE;
+         i++) {
+        ASSERT_EQ(flash_emulator_->memory_[i], kByte)
+            << "Mismatch address " << std::hex << i;
+    }
 }

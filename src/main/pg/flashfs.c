@@ -34,6 +34,7 @@ PG_REGISTER_WITH_RESET_TEMPLATE(flashfsConfig_t, flashfsConfig, PG_FLASHFS_CONFI
 
 PG_RESET_TEMPLATE(flashfsConfig_t, flashfsConfig,
     .armingEraseFreeSpace = 8 * 1024 * 1024,
+    .onlineErase = 0,
 );
 
 #endif
