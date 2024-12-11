@@ -234,6 +234,18 @@ static void flashfsAdvanceTailInBuffer(uint32_t delta)
     }
 }
 
+static void flashfsLoopOnlineErase() {
+    // Check if (marking) online erase is needed
+    const uint32_t freeSpace = flashfsSize - flashfsGetOffset();
+    if (flashfsConfig()->onlineErase && flashfsState == FLASHFS_IDLE && freeSpace < flashGeometry->sectorSize) {
+        char str[20] = {0,};
+        tfp_sprintf(str, "Flagged %d", flashfsTransmitBufferUsed()); 
+        blackboxLogCustomString(str);
+        flashfsState = FLASHFS_ONLINE_ERASING;
+        onlineEraseSectors = 1;
+    }
+}
+
 /**
  * Write the given buffers to flash sequentially at the current tail address, advancing the tail address after
  * each write.
@@ -264,12 +276,7 @@ void flashfsWriteCallback(uint32_t arg)
     // Mark that data has been written from the buffer
     dataWritten = true;
 
-    // Check if (marking) online erase is needed
-    const uint32_t freeSpace = flashfsSize - flashfsGetOffset();
-    if (flashfsConfig()->onlineErase && freeSpace < flashGeometry->sectorSize) {
-        flashfsState = FLASHFS_ONLINE_ERASING;
-        onlineEraseSectors = 1;
-    }
+    flashfsLoopOnlineErase();
 }
 
 static uint32_t flashfsWriteBuffers(uint8_t const **buffers, uint32_t *bufferSizes, int bufferCount, bool sync)
@@ -289,6 +296,7 @@ static uint32_t flashfsWriteBuffers(uint8_t const **buffers, uint32_t *bufferSiz
 
     // Are we at EOF already? Abort.
     if (flashfsIsEOF()) {
+        flashfsLoopOnlineErase();
         return 0;
     }
 
@@ -465,14 +473,18 @@ void flashfsEraseAsync(void)
             }
         } else if (flashfsState == FLASHFS_ONLINE_ERASING) {
             if (onlineEraseSectors > 0) {
-                blackboxLogCustomString("Erase");
+                char str[20] = {0,};
+                tfp_sprintf(str, "Erasing %d", flashfsTransmitBufferUsed()); 
+                blackboxLogCustomString(str);
                 flashEraseSector(headAddress);
-                onlineEraseSectors--;
                 headAddress = (headAddress + flashGeometry->sectorSize) % flashfsSize;
+                onlineEraseSectors--;
                 LED1_TOGGLE;
             } else {
+                char str[20] = {0,};
+                tfp_sprintf(str, "Erased %d", flashfsTransmitBufferUsed()); 
+                blackboxLogCustomString(str);
                 flashfsState = FLASHFS_IDLE;
-                blackboxLogCustomString("Done");
                 LED1_OFF;
             }
             
@@ -554,26 +566,28 @@ int flashfsReadPhysical(uint32_t address, uint8_t *buffer, unsigned int len)
  */
 int flashfsReadAbs(uint32_t address, uint8_t *buffer, unsigned int len)
 {
-    uint32_t address1 = flashfsAddressShift(headAddress, address);
-    uint32_t address2 = 0;
+    uint32_t physicalAddress = flashfsAddressShift(headAddress, address);
     uint16_t len1 = len, len2 = 0;
     int bytesRead;
 
-    // Did caller try to read past the end of the volume?
-    if (address1 + len1 > flashfsSize) {
-        // Truncate their request
-        len1 = flashfsSize - address;
+    // Wrapped read?
+    if (physicalAddress + len1 > flashfsSize) {
+        len1 = flashfsSize - physicalAddress;
         len2 = len - len1;
     }
 
     flashfsFlushSync();
 
-    bytesRead = flashReadBytes(address1, buffer, len1);
-    bytesRead += flashReadBytes(address2, buffer + len1, len2);
+    bytesRead = flashReadBytes(physicalAddress, buffer, len1);
+    if (len2) {
+        // Second section
+        bytesRead += flashReadBytes(0, buffer + len1, len2);
+    }
 
     return bytesRead;
 }
 
+// This function takes a physical address
 static bool flashfsIsPageErased(uint32_t address){
     enum {
         /* We don't expect valid data to ever contain this many consecutive uint32_t's of all 1 bits: */
@@ -632,7 +646,7 @@ int flashfsIdentifyStartOfFreeSpace(void)
     while (left < right) {
         mid = (left + right) / 2;
 
-        uint32_t address = (mid * pageSize + headAddress) % flashfsSize;
+        uint32_t address = flashfsAddressShift(headAddress, mid * pageSize);
         if (flashfsIsPageErased(address)) {
             /* This empty page might be the leftmost empty page in the volume, but we'll need to continue the
              * search leftwards to find out:
@@ -645,7 +659,7 @@ int flashfsIdentifyStartOfFreeSpace(void)
         }
     }
 
-    return (result * pageSize + headAddress) % flashfsSize;
+    return flashfsAddressShift(headAddress, result * pageSize);
 }
 
 /**
@@ -657,7 +671,7 @@ bool flashfsIsEOF(void)
     // In case of using LOOP_FLASHFS, we need 
     //  * 1 free page before a sector to identify boundary.
     //  * +flashfs buffer size to avoid writing to that 1 free page.
-    uint32_t persistedBytes = (tailAddress + flashfsSize - headAddress) % flashfsSize;
+    uint32_t persistedBytes = flashfsAddressShift(tailAddress, -headAddress);
 
     return persistedBytes >=
            flashfsSize - flashGeometry->pageSize - FLASHFS_WRITE_BUFFER_SIZE;
@@ -730,6 +744,9 @@ void flashfsInit(void)
 
     // Start the file pointer off at the beginning of free space so caller can start writing immediately
     flashfsSeekPhysical(flashfsIdentifyStartOfFreeSpace());
+
+    flashfsState = FLASHFS_IDLE;
+    onlineEraseSectors = 0;
 }
 
 #ifdef USE_FLASH_TOOLS

@@ -20,6 +20,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <thread>
+#include <iostream>
 
 #include "drivers/flash.h"
 #include "pg/flash.h"
@@ -115,9 +116,7 @@ uint32_t FlashEmulator::flashPageProgramContinue(const uint8_t **buffers,
             written++;
         }
     }
-    if (write_buffer_tail_ == kPageSize) {
-        Program();
-    }
+
     //    printf("ProgramContinue: written[0x%x]", written);
     return written;
 }
@@ -173,6 +172,10 @@ FlashEmulator::flashPartitionGetTypeName(flashPartitionType_e type) {
     return "FakeTypeFlashfs";
 }
 int FlashEmulator::flashPartitionCount(void) { return 1; }
+
+void FlashEmulator::blackboxLogCustomString(const char *ptr) {
+    std::cout << "blackboxLogCustomString: " << ptr << std::endl;
+};
 
 void FlashEmulator::Program() {
     assert(flash_state_ == kFlashStateIdle);

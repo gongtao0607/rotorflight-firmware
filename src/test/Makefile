@@ -491,6 +491,8 @@ sbus_output_unittest_DEFINES := \
 flashfs_unittest_SRC := \
 		$(USER_DIR)/io/flashfs.c \
 		$(USER_DIR)/pg/flashfs.c \
+		$(USER_DIR)/common/printf.c \
+		$(USER_DIR)/common/typeconversion.c \
 		$(TEST_DIR)/flashfs_unittest.include/flash_emulator.cc \
 		$(TEST_DIR)/flashfs_unittest.include/flash_c_stub.cc
 
