@@ -23,6 +23,7 @@
 
 extern "C" {
 #include "drivers/flash.h"
+#include "blackbox/blackbox.h"
 }
 
 #include "flash_interface.h"
@@ -111,4 +112,9 @@ const char *flashPartitionGetTypeName(flashPartitionType_e type) {
 int flashPartitionCount(void) {
     auto flash_intf = g_flash_stub.lock();
     return flash_intf->flashPartitionCount();
+}
+
+void blackboxLogCustomString(const char *ptr) {
+    auto flash_intf = g_flash_stub.lock();
+    flash_intf->blackboxLogCustomString(ptr);
 }

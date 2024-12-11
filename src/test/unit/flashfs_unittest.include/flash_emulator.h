@@ -52,6 +52,7 @@ class FlashEmulator : public FlashInterface {
     const flashPartition_t *flashPartitionFindByIndex(uint8_t index) override;
     const char *flashPartitionGetTypeName(flashPartitionType_e type) override;
     int flashPartitionCount(void) override;
+    void blackboxLogCustomString(const char *ptr) override;
 
     ~FlashEmulator() override {}
 

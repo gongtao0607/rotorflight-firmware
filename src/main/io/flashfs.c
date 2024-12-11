@@ -85,6 +85,7 @@ static DMA_DATA_ZERO_INIT uint8_t flashWriteBuffer[FLASHFS_WRITE_BUFFER_SIZE];
  */
 static uint16_t bufferHead = 0;
 static volatile uint16_t bufferTail = 0;
+static uint16_t bufferDropped = 0;
 
 /* Track if there is new data to write. Until the contents of the buffer have been completely
  * written flashfsFlushAsync() will be repeatedly called. The tail pointer is only updated
@@ -119,6 +120,7 @@ static inline uint32_t flashfsAddressShift(uint32_t address, int32_t offset) {
 static void flashfsClearBuffer(void)
 {
     bufferTail = bufferHead = 0;
+    bufferDropped = 0;
 }
 
 static bool flashfsBufferIsEmpty(void)
@@ -234,6 +236,18 @@ static void flashfsAdvanceTailInBuffer(uint32_t delta)
     }
 }
 
+static void flashfsLoopOnlineErase() {
+    // Check if (marking) online erase is needed
+    const uint32_t freeSpace = flashfsSize - flashfsGetOffset();
+    if (flashfsConfig()->onlineErase && flashfsState == FLASHFS_IDLE && freeSpace < flashGeometry->sectorSize) {
+        char str[20] = {0,};
+        tfp_sprintf(str, "Flagged %d", flashfsTransmitBufferUsed()); 
+        blackboxLogCustomString(str);
+        flashfsState = FLASHFS_ONLINE_ERASING;
+        onlineEraseSectors = 1;
+    }
+}
+
 /**
  * Write the given buffers to flash sequentially at the current tail address, advancing the tail address after
  * each write.
@@ -264,12 +278,7 @@ void flashfsWriteCallback(uint32_t arg)
     // Mark that data has been written from the buffer
     dataWritten = true;
 
-    // Check if (marking) online erase is needed
-    const uint32_t freeSpace = flashfsSize - flashfsGetOffset();
-    if (flashfsConfig()->onlineErase && freeSpace < flashGeometry->sectorSize) {
-        flashfsState = FLASHFS_ONLINE_ERASING;
-        onlineEraseSectors = 1;
-    }
+    flashfsLoopOnlineErase();
 }
 
 static uint32_t flashfsWriteBuffers(uint8_t const **buffers, uint32_t *bufferSizes, int bufferCount, bool sync)
@@ -289,6 +298,7 @@ static uint32_t flashfsWriteBuffers(uint8_t const **buffers, uint32_t *bufferSiz
 
     // Are we at EOF already? Abort.
     if (flashfsIsEOF()) {
+        flashfsLoopOnlineErase();
         return 0;
     }
 
@@ -465,14 +475,18 @@ void flashfsEraseAsync(void)
             }
         } else if (flashfsState == FLASHFS_ONLINE_ERASING) {
             if (onlineEraseSectors > 0) {
-                blackboxLogCustomString("Erase");
+                char str[20] = {0,};
+                tfp_sprintf(str, "Erasing %d", flashfsTransmitBufferUsed()); 
+                blackboxLogCustomString(str);
                 flashEraseSector(headAddress);
-                onlineEraseSectors--;
                 headAddress = (headAddress + flashGeometry->sectorSize) % flashfsSize;
+                onlineEraseSectors--;
                 LED1_TOGGLE;
             } else {
+                char str[30] = {0,};
+                tfp_sprintf(str, "Erased %d %d", flashfsTransmitBufferUsed(), bufferDropped); 
+                blackboxLogCustomString(str);
                 flashfsState = FLASHFS_IDLE;
-                blackboxLogCustomString("Done");
                 LED1_OFF;
             }
             
@@ -504,6 +518,10 @@ void flashfsWriteByte(uint8_t byte)
 #endif
 
     flashWriteBuffer[bufferHead++] = byte;
+
+    if (flashfsBufferIsEmpty()) {
+        bufferDropped++;
+    }
 
     if (bufferHead >= FLASHFS_WRITE_BUFFER_SIZE) {
         bufferHead = 0;
@@ -732,6 +750,9 @@ void flashfsInit(void)
 
     // Start the file pointer off at the beginning of free space so caller can start writing immediately
     flashfsSeekPhysical(flashfsIdentifyStartOfFreeSpace());
+
+    flashfsState = FLASHFS_IDLE;
+    onlineEraseSectors = 0;
 }
 
 #ifdef USE_FLASH_TOOLS
