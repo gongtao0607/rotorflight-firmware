@@ -1517,6 +1517,25 @@ static bool mspProcessOutCommand(int16_t cmdMSP, sbuf_t *dst)
         sbufWriteU16(dst, mixerConfig()->swash_trim[2]);
         sbufWriteU8(dst, mixerConfig()->swash_tta_precomp);
         sbufWriteU8(dst, mixerConfig()->swash_geo_correction);
+
+        // 2 * 2 = 4 int8_t
+        for(uint8_t dst_ch = ADV_MIXER_ROLL; dst_ch <= ADV_MIXER_PITCH; dst_ch++) {
+            for(uint8_t dir = ADV_MIXER_DIR_A; dir <= ADV_MIXER_DIR_B; dir++) {
+                sbufWriteS8(dst, mixerConfig()->adv_mix_collective[dst_ch][dir]);
+            }
+        }
+
+        // 2 * 2 * 2 * 3 = 24 int8_t
+        for (uint8_t src_ch = ADV_MIXER_ROLL; src_ch <= ADV_MIXER_PITCH; src_ch++) {
+            for (uint8_t dst_ch = ADV_MIXER_ROLL; dst_ch <= ADV_MIXER_COLL; dst_ch++) {
+                if (src_ch == dst_ch) continue;
+                for(uint8_t dir = ADV_MIXER_DIR_A; dir <= ADV_MIXER_DIR_B; dir++) {
+                    for(uint8_t coll = ADV_MIXER_LOW_COLL; coll <= ADV_MIXER_HIGH_COLL; coll++) {
+                        sbufWriteS8(dst, mixerConfig()->adv_mix_cyclic[src_ch][dst_ch][dir][coll]);
+                    }
+                }
+            }
+        }
         break;
 
     case MSP_MIXER_INPUTS:
@@ -3036,6 +3055,27 @@ static mspResult_e mspProcessInCommand(mspDescriptor_t srcDesc, int16_t cmdMSP, 
         mixerConfigMutable()->swash_tta_precomp = sbufReadU8(src);
         mixerConfigMutable()->swash_geo_correction = sbufReadU8(src);
         mixerInitConfig();
+
+        if (sbufBytesRemaining(src) >= 28) {
+            // 2 * 2 = 4 int8_t
+            for(uint8_t dst_ch = ADV_MIXER_ROLL; dst_ch <= ADV_MIXER_PITCH; dst_ch++) {
+                for(uint8_t dir = ADV_MIXER_DIR_A; dir <= ADV_MIXER_DIR_B; dir++) {
+                    mixerConfigMutable()->adv_mix_collective[dst_ch][dir] = sbufReadS8(src);
+                }
+            }
+
+            // 2 * 2 * 2 * 3 = 24 int8_t
+            for (uint8_t src_ch = ADV_MIXER_ROLL; src_ch <= ADV_MIXER_PITCH; src_ch++) {
+                for (uint8_t dst_ch = ADV_MIXER_ROLL; dst_ch <= ADV_MIXER_COLL; dst_ch++) {
+                    if (src_ch == dst_ch) continue;
+                    for(uint8_t dir = ADV_MIXER_DIR_A; dir <= ADV_MIXER_DIR_B; dir++) {
+                        for(uint8_t coll = ADV_MIXER_LOW_COLL; coll <= ADV_MIXER_HIGH_COLL; coll++) {
+                            mixerConfigMutable()->adv_mix_cyclic[src_ch][dst_ch][dir][coll] = sbufReadS8(src);
+                        }
+                    }
+                }
+            }
+        }
         break;
 
     case MSP_SET_MIXER_INPUT:

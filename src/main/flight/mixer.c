@@ -364,6 +364,61 @@ static void mixerUpdateMotorizedTail(void)
     }
 }
 
+static float advMixingApplyCurve(const int8_t *curve)
+{
+    const float collective = mixer.input[MIXER_IN_STABILIZED_COLLECTIVE];
+    if (collective < 0) {
+        return scaleRangef(collective, -1, 0, curve[ADV_MIXER_LOW_COLL],
+                           curve[ADV_MIXER_MID_COLL]) /
+               100.0f;
+    }
+    return scaleRangef(collective, 0, 1, curve[ADV_MIXER_MID_COLL],
+                       curve[ADV_MIXER_HIGH_COLL]) /
+           100.0f;
+}
+
+static void mixerUpdateAdvancedSwashMixing()
+{
+    const float RPC[ADV_MIXER_RPC_COUNT] = {
+        mixer.input[MIXER_IN_STABILIZED_ROLL],
+        mixer.input[MIXER_IN_STABILIZED_PITCH],
+        mixer.input[MIXER_IN_STABILIZED_COLLECTIVE],
+    };
+    float new_RPC[ADV_MIXER_RPC_COUNT] = {
+        mixer.input[MIXER_IN_STABILIZED_ROLL],
+        mixer.input[MIXER_IN_STABILIZED_PITCH],
+        mixer.input[MIXER_IN_STABILIZED_COLLECTIVE],
+    };
+
+    // collective -> cyclic (roll/pitch)
+    for (uint8_t dst_ch = ADV_MIXER_ROLL; dst_ch <= ADV_MIXER_PITCH; dst_ch++) {
+        const uint8_t dir =
+            RPC[ADV_MIXER_COLL] < 0 ? ADV_MIXER_DIR_A : ADV_MIXER_DIR_B;
+        const float rate =
+            mixerConfig()->adv_mix_collective[dst_ch][dir] / 100.0f;
+        new_RPC[dst_ch] += rate * sqrtf(fabsf(RPC[ADV_MIXER_COLL]));
+    }
+
+    // cyclic -> cyclic + collective
+    // mixing rate is based on collective on a 3-point curve (collective
+    // low/mid/high)
+    for (uint8_t src_ch = ADV_MIXER_ROLL; src_ch <= ADV_MIXER_PITCH; src_ch++) {
+        const uint8_t dir = RPC[src_ch] < 0 ? ADV_MIXER_DIR_A : ADV_MIXER_DIR_B;
+        for (uint8_t dst_ch = ADV_MIXER_ROLL; dst_ch <= ADV_MIXER_COLL;
+             dst_ch++) {
+            if (dst_ch == src_ch)
+                continue; // exclude roll->roll and pitch->pitch
+            const float rate = advMixingApplyCurve(
+                mixerConfig()->adv_mix_cyclic[src_ch][dst_ch][dir]);
+            new_RPC[dst_ch] += rate * (RPC[src_ch]) * (RPC[src_ch]);
+        }
+    }
+
+    mixer.input[MIXER_IN_STABILIZED_ROLL] = new_RPC[ADV_MIXER_ROLL];
+    mixer.input[MIXER_IN_STABILIZED_PITCH] = new_RPC[ADV_MIXER_PITCH];
+    mixer.input[MIXER_IN_STABILIZED_COLLECTIVE] = new_RPC[ADV_MIXER_COLL];
+}
+
 #define inputValue(NAME)                (mixer.input[MIXER_IN_STABILIZED_##NAME] * mixerInputs(MIXER_IN_STABILIZED_##NAME)->rate / 1000.0f)
 #define setServoOutput(SERVO,VAL)       (mixer.output[MIXER_SERVO_OFFSET + (SERVO)] = (VAL))
 #define setMotorOutput(MOTOR,VAL)       (mixer.output[MIXER_MOTOR_OFFSET + (MOTOR)] = (VAL))
@@ -372,6 +427,10 @@ static void mixerUpdateSwash(void)
 {
     if (mixerConfig()->swash_type)
     {
+        // Adv Mixing should apply before adding center trims or corrections.
+        // The reason is that the Adv.Mixing treats 0 as neutral.
+        mixerUpdateAdvancedSwashMixing();
+
         float SR = inputValue(ROLL);
         float SP = inputValue(PITCH);
         float SY = inputValue(YAW);
