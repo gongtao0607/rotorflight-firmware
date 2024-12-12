@@ -38,6 +38,13 @@ PG_RESET_TEMPLATE(mixerConfig_t, mixerConfig,
     .swash_trim = { 0, 0, 0 },
     .swash_tta_precomp = 0,
     .swash_geo_correction = 0,
+    .adv_mix_collective = { { 0, 0 }, { 0, 0 } },
+    .adv_mix_cyclic = { { { { 0, 0, 0 }, { 0, 0, 0 } },
+                          { { 0, 0, 0 }, { 0, 0, 0 } },
+                          { { 0, 0, 0 }, { 0, 0, 0 } } },
+                        { { { 0, 0, 0 }, { 0, 0, 0 } },
+                          { { 0, 0, 0 }, { 0, 0, 0 } },
+                          { { 0, 0, 0 }, { 0, 0, 0 } } } },
 );
 
 PG_REGISTER_ARRAY(mixerRule_t, MIXER_RULE_COUNT, mixerRules, PG_GENERIC_MIXER_RULES, 0);
@@ -62,4 +69,3 @@ void pgResetFn_mixerInputs(mixerInput_t *input)
         input[i].max  =  1000;
     }
 }
-
