@@ -84,6 +84,27 @@ enum {
     DIR_CCW,
 };
 
+enum {
+    ADV_MIXER_ROLL = 0,
+    ADV_MIXER_PITCH = 1,
+    ADV_MIXER_RP_COUNT = 2,
+    ADV_MIXER_COLL = 2,
+    ADV_MIXER_RPC_COUNT = 3,
+};
+
+enum {
+    ADV_MIXER_DIR_A = 0,
+    ADV_MIXER_DIR_B = 1,
+    ADV_MIXER_DIRS,
+};
+
+enum {
+    ADV_MIXER_LOW_COLL  = 0,
+    ADV_MIXER_MID_COLL  = 1,
+    ADV_MIXER_HIGH_COLL = 2,
+    ADV_MIXER_COLL_POINTS,
+};
+
 #define MIXER_RULE_COUNT      32
 #define MIXER_INPUT_COUNT     MIXER_IN_COUNT
 
@@ -106,6 +127,29 @@ typedef struct
     uint8_t   swash_tta_precomp;    // TTA correction %
 
     int8_t    swash_geo_correction; // Head geometry correction (collective assymetry)
+
+    // FUTABA swashplate mixer
+    // FUTABA -- Rotorflight naming
+    //  AIL   --  roll
+    //  ELE   --  pitch
+    //  PIT   --  coll
+    // Unlike FUTABA, all values here are adjustments (e.g., +1%, -12%...) based
+    // on standard value.
+
+    // collective->cyclic mixing
+    // array dimensions: 
+    //     [roll, pitch]
+    //     [DIR.A, DIR.B]
+    int8_t    adv_mix_collective[ADV_MIXER_RP_COUNT][ADV_MIXER_DIRS];
+
+    // cyclic -> collective+cyclic mixing
+    // array dimensions: 
+    //     [source (roll, pitch)]
+    //     [destination (roll, pitch, collective) ]
+    //     [DIR.A, DIR,B]
+    //     [collective low/mid/high]
+    // (roll->roll and pitch->pitch are unused)
+    int8_t    adv_mix_cyclic[ADV_MIXER_RP_COUNT][ADV_MIXER_RPC_COUNT][ADV_MIXER_DIRS][ADV_MIXER_COLL_POINTS];
 
 } mixerConfig_t;
 
