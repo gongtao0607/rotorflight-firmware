@@ -56,10 +56,19 @@
 
 #include "blackbox/blackbox.h"
 
+
+/*
+ * How online erase work:
+ *   1. When start programming (flush) a page, if erase needed, set FLASHFS_ONLINE_ERASE_PENDING 
+ *   2. No more flush can be done when FLASHFS_ONLINE_ERASE_PENDING
+ *   3. When page program finishes, EraseAsync task picks up the erase task and set FLASHFS_ONLINE_ERASING 
+ *   4. When erase finishes, EraseAsync task resets state to FLASHFS_IDLE
+ */
 typedef enum {
     FLASHFS_IDLE,
     FLASHFS_ALL_ERASING,
     FLASHFS_ARMING_ERASING,
+    FLASHFS_ONLINE_ERASE_PENDING,
     FLASHFS_ONLINE_ERASING,
 } flashfsState_e;
 
@@ -236,22 +245,6 @@ static void flashfsAdvanceTailInBuffer(uint32_t delta)
     }
 }
 
-static timeUs_t t1, t2, t3;
-extern timeUs_t micros();
-static void flashfsLoopOnlineErase() {
-    // Check if (marking) online erase is needed
-    const uint32_t freeSpace = flashfsSize - flashfsGetOffset();
-    //if (flashfsConfig()->onlineErase && flashfsState == FLASHFS_IDLE && freeSpace < flashGeometry->sectorSize) {
-    if (flashfsConfig()->onlineErase && flashfsState == FLASHFS_IDLE && freeSpace < flashfsSize - 2 * flashGeometry->sectorSize) {
-        char str[20] = {0,};
-        t1 = micros();
-        tfp_sprintf(str, "Flagged %d", flashfsTransmitBufferUsed()); 
-        blackboxLogCustomString(str);
-        flashfsState = FLASHFS_ONLINE_ERASING;
-        onlineEraseSectors = 1;
-    }
-}
-
 /**
  * Write the given buffers to flash sequentially at the current tail address, advancing the tail address after
  * each write.
@@ -281,8 +274,6 @@ void flashfsWriteCallback(uint32_t arg)
 
     // Mark that data has been written from the buffer
     dataWritten = true;
-
-    flashfsLoopOnlineErase();
 }
 
 static uint32_t flashfsWriteBuffers(uint8_t const **buffers, uint32_t *bufferSizes, int bufferCount, bool sync)
@@ -293,13 +284,7 @@ static uint32_t flashfsWriteBuffers(uint8_t const **buffers, uint32_t *bufferSiz
 
     // If sync is true, block until the FLASH device is ready, otherwise return 0 if the device isn't ready
     if (sync) {
-        timeUs_t t1, t2;
-        t1 = micros();
-        while (!flashIsReady());  // metered
-        t2 = micros();
-        char str[20] = {0,};
-        tfp_sprintf(str, "write %x", t2-t1); 
-        blackboxLogCustomString(str);
+        while (!flashIsReady());
     } else {
         if (!flashIsReady()) {
             return 0;
@@ -308,12 +293,39 @@ static uint32_t flashfsWriteBuffers(uint8_t const **buffers, uint32_t *bufferSiz
 
     // Are we at EOF already? Abort.
     if (flashfsIsEOF()) {
-        flashfsLoopOnlineErase();
+#ifdef USE_FLASHFS_LOOP
+        // If EOF, request an online erase unconditionally
+        if (flashfsConfig()->onlineErase) {
+            flashfsState = FLASHFS_ONLINE_ERASE_PENDING;
+        }
+#endif
         return 0;
     }
 
 #ifdef CHECK_FLASH
     checkFlashPtr = tailAddress;
+#endif
+
+#ifdef USE_FLASHFS_LOOP
+    // Check if online erase is needed. Why here? Because we can only
+    // erase when a page (aligned) program is completed.
+
+    if (flashfsState == FLASHFS_ONLINE_ERASE_PENDING) {
+        // Do not try to program more if we are already pending.
+        return 0;
+    }
+
+    const uint32_t freeSpace = flashfsSize - flashfsGetOffset();
+    if (flashfsConfig()->onlineErase && freeSpace < flashGeometry->sectorSize) {
+        // See if we are finishing a page.
+        uint32_t bytes_to_write = 0;
+        if ( bufferCount > 0 ) bytes_to_write += bufferSizes[0];
+        if ( bufferCount > 1 ) bytes_to_write += bufferSizes[1];
+        if (tailAddress / flashGeometry->pageSize != (tailAddress + bytes_to_write)/flashGeometry->pageSize) {
+            flashfsState = FLASHFS_ONLINE_ERASE_PENDING;
+        }
+    }
+
 #endif
 
     flashPageProgramBegin(tailAddress, flashfsWriteCallback);
@@ -452,13 +464,7 @@ void flashfsFlushSync(void)
         flashfsWriteBuffers(buffers, bufferSizes, bufCount, true);
     }
 
-    timeUs_t t1, t2;
-    t1 = micros();
-    while (!flashIsReady());  // metered
-    t2 = micros();
-    char str[20] = {0,};
-    tfp_sprintf(str, "flush %x", t2-t1); 
-    blackboxLogCustomString(str);
+    while (!flashIsReady());
 }
 
 /**
@@ -489,27 +495,17 @@ void flashfsEraseAsync(void)
                 flashfsState = FLASHFS_IDLE;
                 LED1_OFF;
             }
+        } else if (flashfsState == FLASHFS_ONLINE_ERASE_PENDING) {
+            flashEraseSector(headAddress);
+            headAddress = (headAddress + flashGeometry->sectorSize) % flashfsSize;
+            flashfsState = FLASHFS_ONLINE_ERASING;
+            LED1_TOGGLE;
         } else if (flashfsState == FLASHFS_ONLINE_ERASING) {
-            if (onlineEraseSectors > 0) {
-                flashEraseSector(headAddress + 64 * 1024 * 1024);
-                t2 = micros();
-                char str[20] = {0,};
-                tfp_sprintf(str, "Erasing %x", t2-t1); 
-                blackboxLogCustomString(str);
-                //flashEraseSector(flashfsSize - flashGeometry->sectorSize);
-                //flashEraseSector(headAddress);
-                headAddress = (headAddress + flashGeometry->sectorSize) % flashfsSize;
-                onlineEraseSectors--;
-                LED1_TOGGLE;
-            } else {
-                t3 = micros();
-                char str[30] = {0,};
-                tfp_sprintf(str, "Erased %d %d", flashfsTransmitBufferUsed(), t3 - t1); 
-                blackboxLogCustomString(str);
-                flashfsState = FLASHFS_IDLE;
-                LED1_OFF;
-            }
-            
+            char str[30] = {0,};
+            tfp_sprintf(str, "Erased %d %d", flashfsTransmitBufferUsed(), bufferDropped); 
+            blackboxLogCustomString(str);
+            flashfsState = FLASHFS_IDLE;
+            LED1_OFF;
         }
     }
 }
@@ -539,13 +535,14 @@ void flashfsWriteByte(uint8_t byte)
 
     flashWriteBuffer[bufferHead++] = byte;
 
+    if (bufferHead >= FLASHFS_WRITE_BUFFER_SIZE) {
+        bufferHead = 0;
+    }
+
     if (flashfsBufferIsEmpty()) {
         bufferDropped++;
     }
 
-    if (bufferHead >= FLASHFS_WRITE_BUFFER_SIZE) {
-        bufferHead = 0;
-    }
 }
 
 /**
