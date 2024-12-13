@@ -118,3 +118,9 @@ void blackboxLogCustomString(const char *ptr) {
     auto flash_intf = g_flash_stub.lock();
     flash_intf->blackboxLogCustomString(ptr);
 }
+
+extern "C" {
+    uint32_t micros() {
+        return 0;
+    }
+}

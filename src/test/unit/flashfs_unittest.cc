@@ -212,6 +212,8 @@ TEST_F(FlashFSLoopTest, StartFromZero)
     EXPECT_EQ(headAddress, 0);
     EXPECT_EQ(tailAddress, sector_size_ + page_size_);
     EXPECT_TRUE(flash_emulator_->IsErased(tailAddress, sector_size_));
+
+    EXPECT_FALSE(flashfsIsEOF());
 }
 
 TEST_F(FlashFSLoopTest, Flat)
@@ -226,6 +228,8 @@ TEST_F(FlashFSLoopTest, Flat)
     EXPECT_EQ(headAddress, sector_size_);
     EXPECT_EQ(tailAddress, 2 * sector_size_ + page_size_);
     EXPECT_TRUE(flash_emulator_->IsErased(tailAddress, sector_size_));
+
+    EXPECT_FALSE(flashfsIsEOF());
 }
 
 TEST_F(FlashFSLoopTest, Wrapped1)

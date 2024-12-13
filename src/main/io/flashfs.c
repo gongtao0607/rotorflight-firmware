@@ -236,11 +236,15 @@ static void flashfsAdvanceTailInBuffer(uint32_t delta)
     }
 }
 
+static timeUs_t t1, t2, t3;
+extern timeUs_t micros();
 static void flashfsLoopOnlineErase() {
     // Check if (marking) online erase is needed
     const uint32_t freeSpace = flashfsSize - flashfsGetOffset();
-    if (flashfsConfig()->onlineErase && flashfsState == FLASHFS_IDLE && freeSpace < flashGeometry->sectorSize) {
+    //if (flashfsConfig()->onlineErase && flashfsState == FLASHFS_IDLE && freeSpace < flashGeometry->sectorSize) {
+    if (flashfsConfig()->onlineErase && flashfsState == FLASHFS_IDLE && freeSpace < flashfsSize - 2 * flashGeometry->sectorSize) {
         char str[20] = {0,};
+        t1 = micros();
         tfp_sprintf(str, "Flagged %d", flashfsTransmitBufferUsed()); 
         blackboxLogCustomString(str);
         flashfsState = FLASHFS_ONLINE_ERASING;
@@ -289,7 +293,13 @@ static uint32_t flashfsWriteBuffers(uint8_t const **buffers, uint32_t *bufferSiz
 
     // If sync is true, block until the FLASH device is ready, otherwise return 0 if the device isn't ready
     if (sync) {
-        while (!flashIsReady());
+        timeUs_t t1, t2;
+        t1 = micros();
+        while (!flashIsReady());  // metered
+        t2 = micros();
+        char str[20] = {0,};
+        tfp_sprintf(str, "write %x", t2-t1); 
+        blackboxLogCustomString(str);
     } else {
         if (!flashIsReady()) {
             return 0;
@@ -442,7 +452,13 @@ void flashfsFlushSync(void)
         flashfsWriteBuffers(buffers, bufferSizes, bufCount, true);
     }
 
-    while (!flashIsReady());
+    timeUs_t t1, t2;
+    t1 = micros();
+    while (!flashIsReady());  // metered
+    t2 = micros();
+    char str[20] = {0,};
+    tfp_sprintf(str, "flush %x", t2-t1); 
+    blackboxLogCustomString(str);
 }
 
 /**
@@ -475,16 +491,20 @@ void flashfsEraseAsync(void)
             }
         } else if (flashfsState == FLASHFS_ONLINE_ERASING) {
             if (onlineEraseSectors > 0) {
+                flashEraseSector(headAddress + 64 * 1024 * 1024);
+                t2 = micros();
                 char str[20] = {0,};
-                tfp_sprintf(str, "Erasing %d", flashfsTransmitBufferUsed()); 
+                tfp_sprintf(str, "Erasing %x", t2-t1); 
                 blackboxLogCustomString(str);
-                flashEraseSector(headAddress);
+                //flashEraseSector(flashfsSize - flashGeometry->sectorSize);
+                //flashEraseSector(headAddress);
                 headAddress = (headAddress + flashGeometry->sectorSize) % flashfsSize;
                 onlineEraseSectors--;
                 LED1_TOGGLE;
             } else {
+                t3 = micros();
                 char str[30] = {0,};
-                tfp_sprintf(str, "Erased %d %d", flashfsTransmitBufferUsed(), bufferDropped); 
+                tfp_sprintf(str, "Erased %d %d", flashfsTransmitBufferUsed(), t3 - t1); 
                 blackboxLogCustomString(str);
                 flashfsState = FLASHFS_IDLE;
                 LED1_OFF;
