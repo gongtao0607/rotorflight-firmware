@@ -162,7 +162,7 @@ static void emfat_add_log(emfat_entry_t *entry, int number, uint32_t offset, uin
 static int emfat_find_log(emfat_entry_t *entry, int maxCount, int flashfsUsedSpace)
 {
     static uint8_t buffer[HDR_BUF_SIZE];
-    int lastOffset = 0;
+    int lastOffset = -1;
     int currOffset = 0;
     int buffOffset;
     int hdrOffset;
@@ -186,7 +186,7 @@ static int emfat_find_log(emfat_entry_t *entry, int maxCount, int flashfsUsedSpa
         }
 
         // The length of the previous record is now known
-        if (lastOffset != currOffset) {
+        if (lastOffset != -1) {
             // Record the previous entry
             emfat_add_log(entry++, fileNumber++, lastOffset, currOffset - lastOffset);
 
