@@ -1796,6 +1796,11 @@ void blackboxLogEvent(FlightLogEvent event, flightLogEventData_t *data)
             blackboxWriteSignedVB(data->inflightAdjustment.newValue);
         }
         break;
+    case FLIGHT_LOG_EVENT_FLASHFS:
+        blackboxWriteUnsignedVB(data->flashfsState.bufferDropped);
+        blackboxWriteUnsignedVB(data->flashfsState.headAddress);
+        blackboxWriteUnsignedVB(data->flashfsState.tailAddress);
+        break;
     case FLIGHT_LOG_EVENT_CUSTOM_DATA:
         blackboxWrite(data->data.length);
         for (int i = 0; i < data->data.length; i++)

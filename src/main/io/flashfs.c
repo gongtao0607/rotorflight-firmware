@@ -58,18 +58,18 @@
 
 
 /*
- * How online erase work:
- *   1. When start programming (flush) a page, if erase needed, set FLASHFS_ONLINE_ERASE_PENDING 
- *   2. No more flush can be done when FLASHFS_ONLINE_ERASE_PENDING
- *   3. When page program finishes, EraseAsync task picks up the erase task and set FLASHFS_ONLINE_ERASING 
+ * How background erase work:
+ *   1. When start programming (flush) a page, if erase is needed and can be started, set FLASHFS_BACKGROUND_ERASE_PENDING 
+ *   2. No more flush can be done when FLASHFS_BACKGROUND_ERASE_PENDING
+ *   3. When page program finishes, EraseAsync task picks up the erase task and set FLASHFS_BACKGROUND_ERASING 
  *   4. When erase finishes, EraseAsync task resets state to FLASHFS_IDLE
  */
 typedef enum {
     FLASHFS_IDLE,
     FLASHFS_ALL_ERASING,
     FLASHFS_ARMING_ERASING,
-    FLASHFS_ONLINE_ERASE_PENDING,
-    FLASHFS_ONLINE_ERASING,
+    FLASHFS_BACKGROUND_ERASE_PENDING,
+    FLASHFS_BACKGROUND_ERASING,
 } flashfsState_e;
 
 static const flashPartition_t *flashPartition = NULL;
@@ -78,7 +78,6 @@ STATIC_UNIT_TESTED uint32_t flashfsSize = 0;
 static flashfsState_e flashfsState = FLASHFS_IDLE;
 static flashSector_t eraseSectorCurrent = 0;
 static uint16_t armingEraseSectors = 0;
-static uint16_t onlineEraseSectors = 0;
 
 static DMA_DATA_ZERO_INIT uint8_t flashWriteBuffer[FLASHFS_WRITE_BUFFER_SIZE];
 
@@ -294,9 +293,9 @@ static uint32_t flashfsWriteBuffers(uint8_t const **buffers, uint32_t *bufferSiz
     // Are we at EOF already? Abort.
     if (flashfsIsEOF()) {
 #ifdef USE_FLASHFS_LOOP
-        // If EOF, request an online erase unconditionally
-        if (flashfsConfig()->onlineErase) {
-            flashfsState = FLASHFS_ONLINE_ERASE_PENDING;
+        // If EOF, request an background erase unconditionally
+        if (flashfsConfig()->backgroundErase) {
+            flashfsState = FLASHFS_BACKGROUND_ERASE_PENDING;
         }
 #endif
         return 0;
@@ -307,22 +306,23 @@ static uint32_t flashfsWriteBuffers(uint8_t const **buffers, uint32_t *bufferSiz
 #endif
 
 #ifdef USE_FLASHFS_LOOP
-    // Check if online erase is needed. Why here? Because we can only
+    // Check if background erase is needed. Why here? Because we can only
     // erase when a page (aligned) program is completed.
 
-    if (flashfsState == FLASHFS_ONLINE_ERASE_PENDING) {
+    if (flashfsState == FLASHFS_BACKGROUND_ERASE_PENDING) {
         // Do not try to program more if we are already pending.
         return 0;
     }
 
     const uint32_t freeSpace = flashfsSize - flashfsGetOffset();
-    if (flashfsConfig()->onlineErase && freeSpace < flashGeometry->sectorSize) {
+    if (flashfsConfig()->backgroundErase && freeSpace < flashGeometry->sectorSize) {
         // See if we are finishing a page.
         uint32_t bytes_to_write = 0;
         if ( bufferCount > 0 ) bytes_to_write += bufferSizes[0];
         if ( bufferCount > 1 ) bytes_to_write += bufferSizes[1];
         if (tailAddress / flashGeometry->pageSize != (tailAddress + bytes_to_write)/flashGeometry->pageSize) {
-            flashfsState = FLASHFS_ONLINE_ERASE_PENDING;
+            // We will write to or write over a page boundary. We can erase when this write is done.
+            flashfsState = FLASHFS_BACKGROUND_ERASE_PENDING;
         }
     }
 
@@ -470,8 +470,10 @@ void flashfsFlushSync(void)
 /**
  *  Asynchronously erase the flash: Check if ready and then erase sector.
  */
+extern timeUs_t micros();
 void flashfsEraseAsync(void)
 {
+    static timeUs_t t1, t2;
     if ((flashfsIsSupported() && flashIsReady())) {
         if (flashfsState == FLASHFS_ALL_ERASING) {
             if (eraseSectorCurrent <= flashPartition->endSector) {
@@ -495,15 +497,26 @@ void flashfsEraseAsync(void)
                 flashfsState = FLASHFS_IDLE;
                 LED1_OFF;
             }
-        } else if (flashfsState == FLASHFS_ONLINE_ERASE_PENDING) {
+        } else if (flashfsState == FLASHFS_BACKGROUND_ERASE_PENDING) {
+            t1 = micros();
+            char str[30] = {0,};
+            tfp_sprintf(str, "Erasing %d", tailAddress % flashGeometry->pageSize); 
+            blackboxLogCustomString(str);
             flashEraseSector(headAddress);
             headAddress = (headAddress + flashGeometry->sectorSize) % flashfsSize;
-            flashfsState = FLASHFS_ONLINE_ERASING;
+            flashfsState = FLASHFS_BACKGROUND_ERASING;
             LED1_TOGGLE;
-        } else if (flashfsState == FLASHFS_ONLINE_ERASING) {
+        } else if (flashfsState == FLASHFS_BACKGROUND_ERASING) {
+            t2 = micros();
             char str[30] = {0,};
-            tfp_sprintf(str, "Erased %d %d", flashfsTransmitBufferUsed(), bufferDropped); 
+            tfp_sprintf(str, "Erased %d %d %d", flashfsTransmitBufferUsed(), bufferDropped, t2 - t1); 
             blackboxLogCustomString(str);
+            flightLogEventData_t data = {
+                .flashfsState.bufferDropped = bufferDropped,
+                .flashfsState.headAddress = headAddress,
+                .flashfsState.tailAddress = tailAddress,
+            };
+            blackboxLogEvent(FLIGHT_LOG_EVENT_FLASHFS, &data);
             flashfsState = FLASHFS_IDLE;
             LED1_OFF;
         }
@@ -769,7 +782,6 @@ void flashfsInit(void)
     flashfsSeekPhysical(flashfsIdentifyStartOfFreeSpace());
 
     flashfsState = FLASHFS_IDLE;
-    onlineEraseSectors = 0;
 }
 
 #ifdef USE_FLASH_TOOLS

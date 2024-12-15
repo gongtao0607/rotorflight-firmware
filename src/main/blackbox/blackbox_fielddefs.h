@@ -113,6 +113,7 @@ typedef enum {
     FLIGHT_LOG_EVENT_GOVSTATE = 50,   // Add new event type for main motor governor state.
     FLIGHT_LOG_EVENT_RESCUE_STATE = 51,
     FLIGHT_LOG_EVENT_AIRBORNE_STATE = 52,
+    FLIGHT_LOG_EVENT_FLASHFS = 53,
     FLIGHT_LOG_EVENT_CUSTOM_DATA = 100,
     FLIGHT_LOG_EVENT_CUSTOM_STRING = 101,
     FLIGHT_LOG_EVENT_LOG_END = 255
@@ -219,6 +220,12 @@ typedef struct flightLogEvent_loggingResume_s {
     uint32_t currentTime;
 } flightLogEvent_loggingResume_t;
 
+typedef struct flightLogEvent_flashfsState_s {
+    uint32_t headAddress;
+    uint32_t tailAddress;
+    uint16_t bufferDropped;
+} flightLogEvent_flashfsState_t;
+
 #define FLIGHT_LOG_EVENT_INFLIGHT_ADJUSTMENT_FUNCTION_FLOAT_VALUE_FLAG 128
 
 typedef union flightLogEventData_u {
@@ -227,6 +234,7 @@ typedef union flightLogEventData_u {
     flightLogEvent_govState_t govState;
     flightLogEvent_rescueState_t rescueState;
     flightLogEvent_airborneState_t airborneState;
+    flightLogEvent_flashfsState_t flashfsState;
     flightLogEvent_disarm_t disarm;
     flightLogEvent_inflightAdjustment_t inflightAdjustment;
     flightLogEvent_customData_t data;

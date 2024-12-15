@@ -379,7 +379,7 @@ static void flashConfigurePartitions(void)
 #endif
 
 #ifdef USE_FLASHFS
-    endSector = 8 * 1024 * 1024 / flashGeometry->sectorSize - 1;
+//    endSector = 8 * 1024 * 1024 / flashGeometry->sectorSize - 1;
     flashPartitionSet(FLASH_PARTITION_TYPE_FLASHFS, startSector, endSector);
 #endif
 }
