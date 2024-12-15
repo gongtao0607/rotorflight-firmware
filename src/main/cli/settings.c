@@ -1753,8 +1753,8 @@ const clivalue_t valueTable[] = {
 #endif
 
 #ifdef USE_FLASHFS_LOOP
-    { "flashfs_arming_erase_free_space", VAR_UINT32 | MASTER_VALUE, .config.u32Max = UINT32_MAX, PG_FLASHFS_CONFIG, offsetof(flashfsConfig_t, armingEraseFreeSpace) },
-    { "flashfs_background_erase",        VAR_UINT8  | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_FLASHFS_CONFIG, offsetof(flashfsConfig_t, backgroundErase) },
+    { "flashfs_arming_erase",     VAR_UINT32 | MASTER_VALUE, .config.u32Max = UINT32_MAX, PG_FLASHFS_CONFIG, offsetof(flashfsConfig_t, armingEraseFreeSpace) },
+    { "flashfs_background_erase", VAR_UINT8  | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_FLASHFS_CONFIG, offsetof(flashfsConfig_t, backgroundErase) },
 #endif
 };
 

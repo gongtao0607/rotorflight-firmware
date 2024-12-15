@@ -26,7 +26,6 @@
 void flashfsEraseCompletely(void);
 void flashfsEraseRange(uint32_t start, uint32_t end);
 
-uint32_t flashfsGetAbsAddress(uint32_t);
 uint32_t flashfsGetSize(void);
 uint32_t flashfsGetOffset(void);
 uint32_t flashfsGetWriteBufferFreeSpace(void);
@@ -35,11 +34,13 @@ int flashfsIdentifyStartOfFreeSpace(void);
 struct flashGeometry_s;
 const struct flashGeometry_s* flashfsGetGeometry(void);
 
+void flashfsSeekAbs(uint32_t offset);
 void flashfsSeekPhysical(uint32_t offset);
 
 void flashfsWriteByte(uint8_t byte);
 void flashfsWrite(const uint8_t *data, unsigned int len);
 
+int flashfsReadAbs(uint32_t offset, uint8_t *data, unsigned int len);
 int flashfsReadPhysical(uint32_t offset, uint8_t *data, unsigned int len);
 
 bool flashfsFlushAsync(void);
@@ -57,10 +58,8 @@ bool flashfsVerifyEntireFlash(void);
 
 #ifdef USE_FLASHFS_LOOP
 void flashfsLoopArmingErase();
-#endif
-
-int flashfsReadAbs(uint32_t offset, uint8_t *data, unsigned int len);
-void flashfsSeekAbs(uint32_t offset);
 
 uint32_t flashfsGetHeadAddress();
 uint32_t flashfsGetTailAddress();
+
+#endif
