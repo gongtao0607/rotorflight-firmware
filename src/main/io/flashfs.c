@@ -56,8 +56,8 @@
 
 typedef enum {
     FLASHFS_IDLE,
-    FLASHFS_ALL_ERASEING,
-    FLASHFS_ARMING_ERASEING,
+    FLASHFS_ALL_ERASING,
+    FLASHFS_ARMING_ERASING,
 } flashfsState_e;
 
 static const flashPartition_t *flashPartition = NULL;
@@ -137,7 +137,7 @@ void flashfsEraseCompletely(void)
         } else {
             // start asynchronous erase of all sectors
             eraseSectorCurrent = flashPartition->startSector;
-            flashfsState = FLASHFS_ALL_ERASEING;
+            flashfsState = FLASHFS_ALL_ERASING;
         }
     }
 
@@ -430,7 +430,7 @@ void flashfsFlushSync(void)
 void flashfsEraseAsync(void)
 {
     if ((flashfsIsSupported() && flashIsReady())) {
-        if (flashfsState == FLASHFS_ALL_ERASEING) {
+        if (flashfsState == FLASHFS_ALL_ERASING) {
             if (eraseSectorCurrent <= flashPartition->endSector) {
                 // Erase sector
                 uint32_t sectorAddress = eraseSectorCurrent * flashGeometry->sectorSize;
@@ -442,7 +442,7 @@ void flashfsEraseAsync(void)
                 flashfsState = FLASHFS_IDLE;
                 LED1_OFF;
             }
-        } else if (flashfsState == FLASHFS_ARMING_ERASEING) {
+        } else if (flashfsState == FLASHFS_ARMING_ERASING) {
             if (armingEraseSectors > 0) {
                 flashEraseSector(headAddress);
                 armingEraseSectors--;
@@ -764,7 +764,7 @@ void flashfsLoopArmingErase()
     const uint32_t sectorSize = flashGeometry->sectorSize;
     armingEraseSectors = (bytesNeeded + sectorSize - 1) / sectorSize;
 
-    flashfsState = FLASHFS_ARMING_ERASEING;
+    flashfsState = FLASHFS_ARMING_ERASING;
 }
 #endif
 
