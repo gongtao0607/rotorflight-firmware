@@ -379,7 +379,12 @@ static void flashConfigurePartitions(void)
 #endif
 
 #ifdef USE_FLASHFS
-//    endSector = 8 * 1024 * 1024 / flashGeometry->sectorSize - 1;
+#ifdef FLASHFS_LOOP_DEBUG
+#if 0
+    // Size override for easier ground testing
+    endSector = 8 * 1024 * 1024 / flashGeometry->sectorSize - 1;
+#endif
+#endif
     flashPartitionSet(FLASH_PARTITION_TYPE_FLASHFS, startSector, endSector);
 #endif
 }

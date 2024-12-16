@@ -455,13 +455,13 @@ TEST_F(FlashFSLoopArmingEraseTest, Wrapped)
     EXPECT_TRUE(flash_emulator_->IsErased(0, sector_size_));
 }
 
-class FlashFSLoopOnlineEraseTest : public FlashFSLoopArmingEraseTest { };
+class FlashFSLoopBackgroundEraseTest : public FlashFSLoopArmingEraseTest { };
 
-TEST_F(FlashFSLoopOnlineEraseTest, flashfsWriteOverFlashSize)
+TEST_F(FlashFSLoopBackgroundEraseTest, flashfsWriteOverFlashSize)
 {
     flashfsInit();
     EXPECT_TRUE(flashfsIsReady());
-    flashfsConfigMutable()->onlineErase = true;
+    flashfsConfigMutable()->backgroundErase = true;
 
     constexpr uint32_t kBufferSize = 128;
     constexpr uint8_t kByte = 0x44;
@@ -480,7 +480,7 @@ TEST_F(FlashFSLoopOnlineEraseTest, flashfsWriteOverFlashSize)
     } while (written <= flash_emulator_->kFlashFSSize * 2);
 
     // This test is non-deterministic.
-    // After writing the full flashfs space once, it will start online erasing,
+    // After writing the full flashfs space once, it will start background erasing,
     // where a lot of writes can be silently dropped (we are writing way faster
     // than the actual BBlog). In the end, we check if there's less than 2
     // erased sector and call it success.

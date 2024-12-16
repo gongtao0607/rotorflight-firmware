@@ -51,5 +51,4 @@ class FlashMock : public FlashInterface {
     MOCK_METHOD(const char *, flashPartitionGetTypeName,
                 (flashPartitionType_e type), (override));
     MOCK_METHOD(int, flashPartitionCount, (), (override));
-    MOCK_METHOD(void, blackboxLogCustomString, (const char *ptr), (override));
 };

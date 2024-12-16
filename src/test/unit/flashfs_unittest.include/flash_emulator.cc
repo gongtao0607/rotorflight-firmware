@@ -173,10 +173,6 @@ FlashEmulator::flashPartitionGetTypeName(flashPartitionType_e type) {
 }
 int FlashEmulator::flashPartitionCount(void) { return 1; }
 
-void FlashEmulator::blackboxLogCustomString(const char *ptr) {
-    std::cout << "blackboxLogCustomString: " << ptr << std::endl;
-};
-
 void FlashEmulator::Program() {
     assert(flash_state_ == kFlashStateIdle);
     flash_state_ = kFlashStateProgramming;

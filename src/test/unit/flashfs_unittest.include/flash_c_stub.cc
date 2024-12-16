@@ -114,13 +114,8 @@ int flashPartitionCount(void) {
     return flash_intf->flashPartitionCount();
 }
 
-void blackboxLogCustomString(const char *ptr) {
-    auto flash_intf = g_flash_stub.lock();
-    flash_intf->blackboxLogCustomString(ptr);
-}
-
-extern "C" {
-    uint32_t micros() {
-        return 0;
-    }
+// functions we don't care
+void blackboxLogEvent(FlightLogEvent event, flightLogEventData_t *data) {
+    UNUSED(event);
+    UNUSED(data);
 }

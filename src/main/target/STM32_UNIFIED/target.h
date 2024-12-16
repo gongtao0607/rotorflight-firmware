@@ -365,6 +365,7 @@
 
 #define USE_FLASHFS
 #define USE_FLASHFS_LOOP
+#define FLASHFS_LOOP_DEBUG  // FIXME: remove after testing
 #define USE_FLASH_TOOLS
 #define USE_FLASH_M25P16
 #define USE_FLASH_W25N01G          // 1Gb NAND flash support

@@ -54,5 +54,4 @@ class FlashInterface {
     virtual const char *
     flashPartitionGetTypeName(flashPartitionType_e type) = 0;
     virtual int flashPartitionCount(void) = 0;
-    virtual void blackboxLogCustomString(const char *ptr) = 0;
 };

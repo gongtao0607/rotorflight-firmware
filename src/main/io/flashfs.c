@@ -470,10 +470,14 @@ void flashfsFlushSync(void)
 /**
  *  Asynchronously erase the flash: Check if ready and then erase sector.
  */
+#ifdef FLASHFS_LOOP_DEBUG
 extern timeUs_t micros();
+#endif
 void flashfsEraseAsync(void)
 {
+#ifdef FLASHFS_LOOP_DEBUG
     static timeUs_t t1, t2;
+#endif
     if ((flashfsIsSupported() && flashIsReady())) {
         if (flashfsState == FLASHFS_ALL_ERASING) {
             if (eraseSectorCurrent <= flashPartition->endSector) {
@@ -498,19 +502,23 @@ void flashfsEraseAsync(void)
                 LED1_OFF;
             }
         } else if (flashfsState == FLASHFS_BACKGROUND_ERASE_PENDING) {
+#ifdef FLASHFS_LOOP_DEBUG
             t1 = micros();
             char str[30] = {0,};
             tfp_sprintf(str, "Erasing %d", tailAddress % flashGeometry->pageSize); 
             blackboxLogCustomString(str);
+#endif
             flashEraseSector(headAddress);
             headAddress = (headAddress + flashGeometry->sectorSize) % flashfsSize;
             flashfsState = FLASHFS_BACKGROUND_ERASING;
             LED1_TOGGLE;
         } else if (flashfsState == FLASHFS_BACKGROUND_ERASING) {
+#ifdef FLASHFS_LOOP_DEBUG
             t2 = micros();
             char str[30] = {0,};
             tfp_sprintf(str, "Erased %d %d %d", flashfsTransmitBufferUsed(), bufferDropped, t2 - t1); 
             blackboxLogCustomString(str);
+#endif
             flightLogEventData_t data = {
                 .flashfsState.bufferDropped = bufferDropped,
                 .flashfsState.headAddress = headAddress,
