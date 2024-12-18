@@ -1014,6 +1014,12 @@ static bool mspCommonProcessOutCommand(int16_t cmdMSP, sbuf_t *dst, mspPostProce
         */
         sbufWriteU8(dst, currentPidProfile->hsflood_relax_level);
         sbufWriteU8(dst, currentPidProfile->hsflood_relax_cutoff);
+        sbufWriteU8(dst, currentPidProfile->setpoint_boost[PID_ROLL]);
+        sbufWriteU8(dst, currentPidProfile->setpoint_boost[PID_PITCH]);
+        sbufWriteU8(dst, currentPidProfile->setpoint_boost[PID_YAW]);
+        sbufWriteU8(dst, currentPidProfile->setpoint_boost_cutoff[PID_ROLL]);
+        sbufWriteU8(dst, currentPidProfile->setpoint_boost_cutoff[PID_PITCH]);
+        sbufWriteU8(dst, currentPidProfile->setpoint_boost_cutoff[PID_YAW]);
         break;
 
     default:
@@ -3572,6 +3578,14 @@ static mspResult_e mspCommonProcessInCommand(mspDescriptor_t srcDesc, int16_t cm
         if (sbufBytesRemaining(src) >= 2) {
             currentPidProfile->hsflood_relax_level = sbufReadU8(src);
             currentPidProfile->hsflood_relax_cutoff = sbufReadU8(src);
+        }
+        if (sbufBytesRemaining(src) >= 6) {
+            currentPidProfile->setpoint_boost[PID_ROLL] = sbufReadU8(src);
+            currentPidProfile->setpoint_boost[PID_PITCH] = sbufReadU8(src);
+            currentPidProfile->setpoint_boost[PID_YAW] = sbufReadU8(src);
+            currentPidProfile->setpoint_boost_cutoff[PID_ROLL] = sbufReadU8(src);
+            currentPidProfile->setpoint_boost_cutoff[PID_PITCH] = sbufReadU8(src);
+            currentPidProfile->setpoint_boost_cutoff[PID_YAW] = sbufReadU8(src);
         }
         break;
 
