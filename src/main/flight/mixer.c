@@ -414,6 +414,12 @@ static void mixerUpdateSwash(void)
 
         float TC = mixer.tailCenterTrim;
 
+        if (SC + SR > 0) {
+            SP -= mixerConfig()->alpha_pos / 1000.0 * (SC + SR);
+        } else {
+            SP -= mixerConfig()->alpha_neg / 1000.0 * (SC + SR);
+        }
+
         SC = mixerCollectiveCorrection(SC);
 
         SR += mixer.swashTrim[0];

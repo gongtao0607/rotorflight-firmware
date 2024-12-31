@@ -107,6 +107,8 @@ typedef struct
 
     int8_t    swash_geo_correction; // Head geometry correction (collective assymetry)
 
+    uint8_t   alpha_pos;
+    uint8_t   alpha_neg;
 } mixerConfig_t;
 
 PG_DECLARE(mixerConfig_t, mixerConfig);
