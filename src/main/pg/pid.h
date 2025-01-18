@@ -178,18 +178,22 @@ typedef struct pidProfile_s {
     uint8_t             cyclic_cross_coupling_ratio;
     uint8_t             cyclic_cross_coupling_cutoff;
 
+    uint16_t            setpoint_boost[3];
+    uint8_t             setpoint_boost_cutoff[3];
+
     pidAngleMode_t      angle;
     pidHorizonMode_t    horizon;
     pidTrainerMode_t    trainer;
     pidRescueConfig_t   rescue;
     governorProfile_t   governor;
 
-
     uint8_t   abs_control;                    // Enable absolute control
     uint8_t   abs_control_gain;               // How strongly should the absolute accumulated error be corrected for
     uint8_t   abs_control_limit;              // Limit to the correction
     uint8_t   abs_control_error_limit;        // Limit to the accumulated error
     uint8_t   abs_control_cutoff;             // Cutoff frequency for path estimation in abs control
+
+    uint8_t             setpoint_rate_limit[3];
 } pidProfile_t;
 
 PG_DECLARE_ARRAY(pidProfile_t, PID_PROFILE_COUNT, pidProfiles);

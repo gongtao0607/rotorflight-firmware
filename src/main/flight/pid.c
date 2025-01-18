@@ -174,6 +174,16 @@ void INIT_CODE pidInitProfile(const pidProfile_t *pidProfile)
     pid.coef[PID_YAW].Kf = YAW_F_TERM_SCALE * pidProfile->pid[PID_YAW].F;
     pid.coef[PID_YAW].Kb = YAW_B_TERM_SCALE * pidProfile->pid[PID_YAW].B;
 
+    // Setpoint boost
+    pid.boostGain[PID_ROLL]   = ROLL_B_TERM_SCALE  * pidProfile->setpoint_boost[PID_ROLL];
+    pid.boostGain[PID_PITCH]  = PITCH_B_TERM_SCALE * pidProfile->setpoint_boost[PID_PITCH];
+    pid.boostGain[PID_YAW]    = YAW_B_TERM_SCALE   * pidProfile->setpoint_boost[PID_YAW];
+
+    // setpointRateLimit
+    pid.setpointRateLimit[PID_ROLL]  = pidProfile->setpoint_rate_limit[PID_ROLL]  * 100.0f;
+    pid.setpointRateLimit[PID_PITCH] = pidProfile->setpoint_rate_limit[PID_PITCH] * 100.0f;
+    pid.setpointRateLimit[PID_YAW]   = pidProfile->setpoint_rate_limit[PID_YAW]   * 100.0f;
+
     // Bleed conversion for pitch
     if (pidProfile->pid[PID_PITCH].O > 0 && pidProfile->pid[PID_PITCH].I > 0)
       pid.coef[PID_PITCH].Kc = pid.coef[PID_PITCH].Ko / pid.coef[PID_PITCH].Ki;
@@ -210,6 +220,7 @@ void INIT_CODE pidInitProfile(const pidProfile_t *pidProfile)
         lowpassFilterInit(&pid.errorFilter[i], LPF_ORDER1, pidProfile->error_cutoff[i], pid.freq, 0);
         difFilterInit(&pid.dtermFilter[i], pidProfile->dterm_cutoff[i], pid.freq);
         difFilterInit(&pid.btermFilter[i], pidProfile->bterm_cutoff[i], pid.freq);
+        difFilterInit(&pid.boostFilter[i], pidProfile->setpoint_boost_cutoff[i], pid.freq);
     }
 
     // Error relax
@@ -459,6 +470,16 @@ static float pidApplySetpoint(uint8_t axis)
     // Apply rescue
     setpoint = rescueApply(axis, setpoint);
 #endif
+
+    // Apply boost
+    setpoint += difFilterApply(&pid.boostFilter[axis], setpoint) * pid.boostGain[axis];
+
+    // Apply setpoint rate limiter
+    const float prev_setpoint = pid.data[axis].setPoint;
+    const float limit = pid.setpointRateLimit[axis] * pid.dT;
+    if (limit != 0) {
+      setpoint = constrainf(setpoint, prev_setpoint - limit, prev_setpoint + limit);
+    }
 
     // Save setpoint
     pid.data[axis].setPoint = setpoint;

@@ -116,6 +116,8 @@ typedef struct pid_s {
     float yawCWStopGain;
     float yawCCWStopGain;
 
+    float boostGain[PID_AXIS_COUNT];
+
     float cyclicCrossCouplingGain[XY_AXIS_COUNT];
 
     float collective;
@@ -132,11 +134,14 @@ typedef struct pid_s {
 
     difFilter_t dtermFilter[PID_AXIS_COUNT];
     difFilter_t btermFilter[PID_AXIS_COUNT];
+    difFilter_t boostFilter[PID_AXIS_COUNT];
 
     order1Filter_t crossCouplingFilter[XY_AXIS_COUNT];
 
     pt1Filter_t offsetFloodRelaxFilter;
     float offsetFloodRelaxFactor;
+
+    float setpointRateLimit[PID_AXIS_COUNT];
 } pid_t;
 
 

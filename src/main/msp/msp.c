@@ -1012,6 +1012,15 @@ static bool mspCommonProcessOutCommand(int16_t cmdMSP, sbuf_t *dst, mspPostProce
          * sbufWriteU8(dst, currentPidProfile->yourFancyParameterA);
          * sbufWriteU8(dst, currentPidProfile->yourFancyParameterB);
         */
+        sbufWriteU8(dst, currentPidProfile->setpoint_boost[PID_ROLL] / 500);
+        sbufWriteU8(dst, currentPidProfile->setpoint_boost[PID_PITCH] / 500);
+        sbufWriteU8(dst, currentPidProfile->setpoint_boost[PID_YAW] / 500);
+        sbufWriteU8(dst, currentPidProfile->setpoint_boost_cutoff[PID_ROLL]);
+        sbufWriteU8(dst, currentPidProfile->setpoint_boost_cutoff[PID_PITCH]);
+        sbufWriteU8(dst, currentPidProfile->setpoint_boost_cutoff[PID_YAW]);
+        sbufWriteU8(dst, currentPidProfile->setpoint_rate_limit[PID_ROLL]);
+        sbufWriteU8(dst, currentPidProfile->setpoint_rate_limit[PID_PITCH]);
+        sbufWriteU8(dst, currentPidProfile->setpoint_rate_limit[PID_YAW]);
         break;
 
     default:
@@ -3586,6 +3595,19 @@ static mspResult_e mspCommonProcessInCommand(mspDescriptor_t srcDesc, int16_t cm
          *     currentPidProfile->yourFancyParameterB = sbufReadU8(src);
          * }
         */
+        if (sbufBytesRemaining(src) >= 6) {
+            currentPidProfile->setpoint_boost[PID_ROLL] = sbufReadU8(src) * 500;
+            currentPidProfile->setpoint_boost[PID_PITCH] = sbufReadU8(src) * 500;
+            currentPidProfile->setpoint_boost[PID_YAW] = sbufReadU8(src) * 500;
+            currentPidProfile->setpoint_boost_cutoff[PID_ROLL] = sbufReadU8(src);
+            currentPidProfile->setpoint_boost_cutoff[PID_PITCH] = sbufReadU8(src);
+            currentPidProfile->setpoint_boost_cutoff[PID_YAW] = sbufReadU8(src);
+        }
+        if (sbufBytesRemaining(src) >= 3) {
+            currentPidProfile->setpoint_rate_limit[PID_ROLL] = sbufReadU8(src);
+            currentPidProfile->setpoint_rate_limit[PID_PITCH] = sbufReadU8(src);
+            currentPidProfile->setpoint_rate_limit[PID_YAW] = sbufReadU8(src);
+        }
         break;
 
     default:

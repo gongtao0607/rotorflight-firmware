@@ -1107,6 +1107,10 @@ const clivalue_t valueTable[] = {
     { "yaw_gyro_cutoff",            VAR_UINT8  | PROFILE_VALUE, .config.minmaxUnsigned = { 0, 250 }, PG_PID_PROFILE, offsetof(pidProfile_t, gyro_cutoff[PID_YAW]) },
     { "yaw_error_cutoff",           VAR_UINT8  | PROFILE_VALUE, .config.minmaxUnsigned = { 0, 250 }, PG_PID_PROFILE, offsetof(pidProfile_t, error_cutoff[PID_YAW]) },
 
+    { "setpoint_boost",             VAR_UINT16 | PROFILE_VALUE | MODE_ARRAY, .config.array.length = 3, PG_PID_PROFILE, offsetof(pidProfile_t, setpoint_boost) },
+    { "setpoint_boost_cutoff",      VAR_UINT8  | PROFILE_VALUE | MODE_ARRAY, .config.array.length = 3, PG_PID_PROFILE, offsetof(pidProfile_t, setpoint_boost_cutoff) },
+    { "setpoint_rate_limit",        VAR_UINT8  | PROFILE_VALUE | MODE_ARRAY, .config.array.length = 3, PG_PID_PROFILE, offsetof(pidProfile_t, setpoint_rate_limit) },
+
     { "yaw_cw_stop_gain",           VAR_UINT8 | PROFILE_VALUE, .config.minmaxUnsigned = { 25, 250 }, PG_PID_PROFILE, offsetof(pidProfile_t, yaw_cw_stop_gain) },
     { "yaw_ccw_stop_gain",          VAR_UINT8 | PROFILE_VALUE, .config.minmaxUnsigned = { 25, 250 }, PG_PID_PROFILE, offsetof(pidProfile_t, yaw_ccw_stop_gain) },
 
