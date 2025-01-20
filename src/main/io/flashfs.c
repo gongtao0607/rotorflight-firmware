@@ -118,6 +118,10 @@ STATIC_UNIT_TESTED uint32_t headAddress = 0;
 // The position of the buffer's tail in the overall flash address space:
 STATIC_UNIT_TESTED uint32_t tailAddress = 0;
 
+#ifdef USE_FLASHFS_LOOP_DEBUG
+#include "blackbox/blackbox.h"
+#endif
+
 static inline uint32_t flashfsAddressShift(uint32_t address, int32_t offset) {
 #ifdef USE_FLASHFS_LOOP
     return (address + offset + flashfsSize) % flashfsSize;
@@ -311,6 +315,9 @@ static uint32_t flashfsWriteBuffers(uint8_t const **buffers, uint32_t *bufferSiz
                 !flashfsIsEOF()) {
 
                 flashSuspend();
+#ifdef USE_FLASHFS_LOOP_DEBUG
+                blackboxLogCustomString("Suspending");
+#endif
                 flashfsState = FLASHFS_ROLLING_ERASE_SUSPENDING;
             }
             return 0;
@@ -351,6 +358,9 @@ static uint32_t flashfsWriteBuffers(uint8_t const **buffers, uint32_t *bufferSiz
             // In rare case we can have rolling erase suspended (erase speed <
             // write speed), which we can't do anything.
             if (flashfsState == FLASHFS_IDLE) {
+#ifdef USE_FLASHFS_LOOP_DEBUG
+                blackboxLogCustomString("EOF Pending");
+#endif
                 flashfsState = FLASHFS_ROLLING_ERASE_PENDING;
             }
         }
@@ -380,6 +390,9 @@ static uint32_t flashfsWriteBuffers(uint8_t const **buffers, uint32_t *bufferSiz
             (tailAddress + bytes_to_write) / flashGeometry->pageSize) {
             // We will write to or write over a page boundary. We can erase when
             // this write is done.
+#ifdef USE_FLASHFS_LOOP_DEBUG
+            blackboxLogCustomString("Pending");
+#endif
             flashfsState = FLASHFS_ROLLING_ERASE_PENDING;
         }
     }
@@ -560,21 +573,33 @@ void flashfsEraseAsync(void)
             }
         } else if (flashfsState == FLASHFS_ROLLING_ERASE_PENDING) {
             flashEraseSector(headAddress);
+#ifdef USE_FLASHFS_LOOP_DEBUG
+            blackboxLogCustomString("Erasing");
+#endif
             flashfsState = FLASHFS_ROLLING_ERASING;
             LED1_TOGGLE;
         } else if (flashfsState == FLASHFS_ROLLING_ERASING) {
             flashfsState = FLASHFS_IDLE;
+#ifdef USE_FLASHFS_LOOP_DEBUG
+            blackboxLogCustomString("Done");
+#endif
             headAddress =
                 flashfsAddressShift(headAddress, flashGeometry->sectorSize);
             LED1_OFF;
         } else if (flashfsState == FLASHFS_ROLLING_ERASE_SUSPENDING) {
             if (flashIsSuspended()) {
+#ifdef USE_FLASHFS_LOOP_DEBUG
+                blackboxLogCustomString("Suspended");
+#endif
                 flashfsState = FLASHFS_ROLLING_ERASE_SUSPENDED;
             }
         } else if (flashfsState == FLASHFS_ROLLING_ERASE_SUSPENDED) {
             if (flashfsTransmitBufferUsed() < FLASHFS_SUSPEND_THRESHOLD ||
                 flashfsIsEOF()) {
                 flashResume();
+#ifdef USE_FLASHFS_LOOP_DEBUG
+                blackboxLogCustomString("Resumed");
+#endif
                 flashfsState = FLASHFS_ROLLING_ERASING;
             }
         }
