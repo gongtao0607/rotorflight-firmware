@@ -194,6 +194,9 @@ typedef struct pidProfile_s {
     uint8_t   abs_control_cutoff;             // Cutoff frequency for path estimation in abs control
 
     uint8_t             setpoint_rate_limit[3];
+
+    uint8_t             p_scale_yaw;
+    uint8_t             p_scale_collective;
 } pidProfile_t;
 
 PG_DECLARE_ARRAY(pidProfile_t, PID_PROFILE_COUNT, pidProfiles);
