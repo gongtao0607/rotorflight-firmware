@@ -1203,7 +1203,7 @@ static void pidApplyCyclicMode3(uint8_t axis, const pidProfile_t * pidProfile)
 }
 
 
-static void pidApplyYawMode3(void)
+static void pidApplyYawMode3(const pidProfile_t *pidProfile)
 {
     const uint8_t axis = FD_YAW;
 
@@ -1222,9 +1222,12 @@ static void pidApplyYawMode3(void)
 
   //// P-term
 
-    // Calculate P-component
-    pid.data[axis].P = pid.coef[axis].Kp * errorRate * stopGain;
+    float Kp_scale = (1.0f - getYawDeflectionAbs() * pidProfile->p_scale_yaw / 100.0f);
+    Kp_scale *= (1.0f - getCollectiveDeflectionAbs() * pidProfile->p_scale_collective / 100.0f);
+    Kp_scale = constrainf(Kp_scale, 0.0f, 1.0f);
 
+    // Calculate P-component
+    pid.data[axis].P = pid.coef[axis].Kp * errorRate * stopGain * Kp_scale;
 
   //// D-term
 
@@ -1336,7 +1339,7 @@ void pidController(const pidProfile_t *pidProfile, timeUs_t currentTimeUs)
             pidApplyCyclicMode3(PID_PITCH, pidProfile);
             pidApplyOffsetBleed(pidProfile);
             pidApplyCyclicCrossCoupling();
-            pidApplyYawMode3();
+            pidApplyYawMode3(pidProfile);
             break;
         case 2:
             pidApplyCyclicMode2(PID_ROLL);
