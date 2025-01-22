@@ -1006,12 +1006,15 @@ static bool mspCommonProcessOutCommand(int16_t cmdMSP, sbuf_t *dst, mspPostProce
     }
 
     case MSP_EXPERIMENTAL:
-        /* 
+        /*
          * Send your experimental parameters to LUA. Like:
          *
          * sbufWriteU8(dst, currentPidProfile->yourFancyParameterA);
          * sbufWriteU8(dst, currentPidProfile->yourFancyParameterB);
         */
+        sbufWriteU8(dst, currentPidProfile->governor.p_gain_neg);
+        sbufWriteU8(dst, currentPidProfile->governor.i_gain_neg);
+        sbufWriteU8(dst, currentPidProfile->governor.base_throttle);
         break;
 
     default:
@@ -3553,6 +3556,11 @@ static mspResult_e mspCommonProcessInCommand(mspDescriptor_t srcDesc, int16_t cm
          *     currentPidProfile->yourFancyParameterB = sbufReadU8(src);
          * }
         */
+        if (sbufBytesRemaining(src) >= 3) {
+            currentPidProfile->governor.p_gain_neg = sbufReadU8(src);
+            currentPidProfile->governor.i_gain_neg = sbufReadU8(src);
+            currentPidProfile->governor.base_throttle = sbufReadU8(src);
+        }
         break;
 
     default:

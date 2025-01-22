@@ -90,6 +90,10 @@ typedef struct {
     uint8_t     collective_ff_weight;
     uint8_t     max_throttle;
     uint8_t     min_throttle;
+
+    uint8_t     p_gain_neg;
+    uint8_t     i_gain_neg;
+    uint8_t     base_throttle;
 } governorProfile_t;
 
 typedef struct {
