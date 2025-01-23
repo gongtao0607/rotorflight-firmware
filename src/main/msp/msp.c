@@ -1023,6 +1023,7 @@ static bool mspCommonProcessOutCommand(int16_t cmdMSP, sbuf_t *dst, mspPostProce
         sbufWriteU8(dst, currentPidProfile->setpoint_rate_limit[PID_YAW]);
         sbufWriteU8(dst, currentPidProfile->p_scale_yaw);
         sbufWriteU8(dst, currentPidProfile->p_scale_collective);
+        sbufWriteU8(dst, currentPidProfile->p_scale_collective_tau);
         sbufWriteU8(dst, currentPidProfile->governor.p_gain_neg);
         sbufWriteU8(dst, currentPidProfile->governor.i_gain_neg);
         sbufWriteU8(dst, currentPidProfile->governor.base_throttle);
@@ -3613,9 +3614,13 @@ static mspResult_e mspCommonProcessInCommand(mspDescriptor_t srcDesc, int16_t cm
             currentPidProfile->setpoint_rate_limit[PID_PITCH] = sbufReadU8(src);
             currentPidProfile->setpoint_rate_limit[PID_YAW] = sbufReadU8(src);
         }
-        if (sbufBytesRemaining(src) >= 2) {
+        if (sbufBytesRemaining(src) >= 3) {
             currentPidProfile->p_scale_yaw = sbufReadU8(src);
             currentPidProfile->p_scale_collective = sbufReadU8(src);
+            currentPidProfile->p_scale_collective_tau = sbufReadU8(src);
+            if (currentPidProfile->p_scale_collective_tau == 0) {
+                currentPidProfile->p_scale_collective_tau = 1;
+            }
         }
         if (sbufBytesRemaining(src) >= 3) {
             currentPidProfile->governor.p_gain_neg = sbufReadU8(src);
