@@ -137,6 +137,8 @@ typedef struct pid_s {
 
     pt1Filter_t offsetFloodRelaxFilter;
     float offsetFloodRelaxFactor;
+
+    filter_t p_scale_collective_filter;
 } pid_t;
 
 

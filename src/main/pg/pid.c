@@ -135,6 +135,7 @@ void resetPidProfile(pidProfile_t *pidProfile)
         .abs_control_limit = 120,
         .abs_control_error_limit = 45,
         .abs_control_cutoff = 6,
+        .p_scale_collective_tau = 30,
     );
 }
 
