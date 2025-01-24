@@ -1022,6 +1022,8 @@ static bool mspCommonProcessOutCommand(int16_t cmdMSP, sbuf_t *dst, mspPostProce
         sbufWriteU8(dst, currentPidProfile->setpoint_rate_limit[PID_PITCH]);
         sbufWriteU8(dst, currentPidProfile->setpoint_rate_limit[PID_YAW]);
         sbufWriteU8(dst, currentPidProfile->p_scale_yaw);
+        sbufWriteU8(dst, currentPidProfile->p_scale_yaw_d);
+        sbufWriteU8(dst, currentPidProfile->p_scale_yaw_d_cutoff);
         sbufWriteU8(dst, currentPidProfile->p_scale_collective);
         sbufWriteU8(dst, currentPidProfile->p_scale_collective_tau);
         sbufWriteU8(dst, currentPidProfile->governor.p_gain_neg);
@@ -3616,6 +3618,8 @@ static mspResult_e mspCommonProcessInCommand(mspDescriptor_t srcDesc, int16_t cm
         }
         if (sbufBytesRemaining(src) >= 3) {
             currentPidProfile->p_scale_yaw = sbufReadU8(src);
+            currentPidProfile->p_scale_yaw_d = sbufReadU8(src);
+            currentPidProfile->p_scale_yaw_d_cutoff = sbufReadU8(src);
             currentPidProfile->p_scale_collective = sbufReadU8(src);
             currentPidProfile->p_scale_collective_tau = sbufReadU8(src);
             if (currentPidProfile->p_scale_collective_tau == 0) {

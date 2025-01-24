@@ -200,6 +200,8 @@ typedef struct pidProfile_s {
     uint8_t             setpoint_rate_limit[3];
 
     uint8_t             p_scale_yaw;
+    uint8_t             p_scale_yaw_d;
+    uint8_t             p_scale_yaw_d_cutoff;
     uint8_t             p_scale_collective;
     uint8_t             p_scale_collective_tau;
 } pidProfile_t;

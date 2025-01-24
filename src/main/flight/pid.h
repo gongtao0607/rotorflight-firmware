@@ -143,6 +143,7 @@ typedef struct pid_s {
 
     float setpointRateLimit[PID_AXIS_COUNT];
 
+    difFilter_t p_scale_yaw_d_filter;
     filter_t p_scale_collective_filter;
 } pid_t;
 
