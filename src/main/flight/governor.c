@@ -70,8 +70,8 @@
 #define GOV_NOMINAL_CELL_VOLTAGE        3.70f
 
 // PID term limits
-#define GOV_P_TERM_LIMIT                0.20f
-#define GOV_I_TERM_LIMIT                0.50f
+#define GOV_P_TERM_LIMIT                0.50f
+#define GOV_I_TERM_LIMIT                1.00f
 #define GOV_D_TERM_LIMIT                0.20f
 #define GOV_F_TERM_LIMIT                0.50f
 
