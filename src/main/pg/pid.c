@@ -132,14 +132,18 @@ void resetPidProfile(pidProfile_t *pidProfile)
         .governor.p_gain_neg = 40,
         .governor.i_gain_neg = 50,
         .governor.base_throttle = 50,
-
         .abs_control = false,
         .abs_control_gain = 10,
         .abs_control_limit = 120,
         .abs_control_error_limit = 45,
         .abs_control_cutoff = 6,
-        .p_scale_yaw_d_cutoff = 25,
-        .p_scale_collective_tau = 30,
+        .scale_p_yaw = 20,
+        .scale_p_yaw_d = 0,
+        .scale_p_yaw_d_cutoff = 25,
+        .scale_p_collective = 20,
+        .scale_p_collective_tau = 30,
+        .scale_d_yaw = 20,
+        .scale_d_collective = 20,
     );
 }
 

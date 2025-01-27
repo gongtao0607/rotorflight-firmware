@@ -1012,11 +1012,13 @@ static bool mspCommonProcessOutCommand(int16_t cmdMSP, sbuf_t *dst, mspPostProce
          * sbufWriteU8(dst, currentPidProfile->yourFancyParameterA);
          * sbufWriteU8(dst, currentPidProfile->yourFancyParameterB);
         */
-        sbufWriteU8(dst, currentPidProfile->p_scale_yaw);
-        sbufWriteU8(dst, currentPidProfile->p_scale_yaw_d);
-        sbufWriteU8(dst, currentPidProfile->p_scale_yaw_d_cutoff);
-        sbufWriteU8(dst, currentPidProfile->p_scale_collective);
-        sbufWriteU8(dst, currentPidProfile->p_scale_collective_tau);
+        sbufWriteU8(dst, currentPidProfile->scale_p_yaw);
+        sbufWriteU8(dst, currentPidProfile->scale_p_yaw_d);
+        sbufWriteU8(dst, currentPidProfile->scale_p_yaw_d_cutoff);
+        sbufWriteU8(dst, currentPidProfile->scale_p_collective);
+        sbufWriteU8(dst, currentPidProfile->scale_p_collective_tau);
+        sbufWriteU8(dst, currentPidProfile->scale_d_yaw);
+        sbufWriteU8(dst, currentPidProfile->scale_d_collective);
         sbufWriteU8(dst, currentPidProfile->governor.p_gain_neg);
         sbufWriteU8(dst, currentPidProfile->governor.i_gain_neg);
         sbufWriteU8(dst, currentPidProfile->governor.base_throttle);
@@ -3594,15 +3596,22 @@ static mspResult_e mspCommonProcessInCommand(mspDescriptor_t srcDesc, int16_t cm
          *     currentPidProfile->yourFancyParameterB = sbufReadU8(src);
          * }
         */
-        if (sbufBytesRemaining(src) >= 3) {
-            currentPidProfile->p_scale_yaw = sbufReadU8(src);
-            currentPidProfile->p_scale_yaw_d = sbufReadU8(src);
-            currentPidProfile->p_scale_yaw_d_cutoff = sbufReadU8(src);
-            currentPidProfile->p_scale_collective = sbufReadU8(src);
-            currentPidProfile->p_scale_collective_tau = sbufReadU8(src);
-            if (currentPidProfile->p_scale_collective_tau == 0) {
-                currentPidProfile->p_scale_collective_tau = 1;
+        if (sbufBytesRemaining(src) >= 7) {
+            currentPidProfile->scale_p_yaw = sbufReadU8(src);
+            currentPidProfile->scale_p_yaw_d = sbufReadU8(src);
+            currentPidProfile->scale_p_yaw_d_cutoff = sbufReadU8(src);
+            currentPidProfile->scale_p_collective = sbufReadU8(src);
+            currentPidProfile->scale_p_collective_tau = sbufReadU8(src);
+            currentPidProfile->scale_d_yaw = sbufReadU8(src);
+            currentPidProfile->scale_d_collective = sbufReadU8(src);
+            if (currentPidProfile->scale_p_collective_tau == 0) {
+                currentPidProfile->scale_p_collective_tau = 1;
             }
+        }
+        if (sbufBytesRemaining(src) >= 3) {
+            currentPidProfile->governor.p_gain_neg = sbufReadU8(src);
+            currentPidProfile->governor.i_gain_neg = sbufReadU8(src);
+            currentPidProfile->governor.base_throttle = sbufReadU8(src);
         }
         if (sbufBytesRemaining(src) >= 3) {
             currentPidProfile->governor.p_gain_neg = sbufReadU8(src);
