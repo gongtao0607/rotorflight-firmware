@@ -197,8 +197,6 @@ typedef struct pidProfile_s {
     uint8_t   abs_control_error_limit;        // Limit to the accumulated error
     uint8_t   abs_control_cutoff;             // Cutoff frequency for path estimation in abs control
 
-    uint8_t             setpoint_rate_limit[3];
-
     uint8_t             p_scale_yaw;
     uint8_t             p_scale_yaw_d;
     uint8_t             p_scale_yaw_d_cutoff;

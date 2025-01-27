@@ -141,8 +141,6 @@ typedef struct pid_s {
     pt1Filter_t offsetFloodRelaxFilter;
     float offsetFloodRelaxFactor;
 
-    float setpointRateLimit[PID_AXIS_COUNT];
-
     difFilter_t p_scale_yaw_d_filter;
     filter_t p_scale_collective_filter;
 } pid_t;
