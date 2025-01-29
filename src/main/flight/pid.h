@@ -136,7 +136,6 @@ typedef struct pid_s {
     order1Filter_t crossCouplingFilter[XY_AXIS_COUNT];
 
     pt1Filter_t offsetFloodRelaxFilter;
-    float offsetFloodRelaxFactor;
 
     difFilter_t p_scale_yaw_d_filter;
     filter_t scale_p_collective_filter;
