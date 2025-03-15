@@ -127,6 +127,16 @@ typedef enum {
     ADJUSTMENT_ACC_TRIM_PITCH           = 64,
     ADJUSTMENT_ACC_TRIM_ROLL            = 65,
 
+    // Yaw Inertia precomp
+    ADJUSTMENT_INERTIA_PRECOMP_GAIN     = 66,
+    ADJUSTMENT_INERTIA_PRECOMP_CUTOFF   = 67,
+
+    // Setpoint boost
+    ADJUSTMENT_PITCH_SP_BOOST_GAIN      = 68,
+    ADJUSTMENT_ROLL_SP_BOOST_GAIN       = 69,
+    ADJUSTMENT_YAW_SP_BOOST_GAIN        = 70,
+    ADJUSTMENT_COLL_SP_BOOST_GAIN       = 71,
+
     ADJUSTMENT_FUNCTION_COUNT
 } adjustmentFunc_e;
 

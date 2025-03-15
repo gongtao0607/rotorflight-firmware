@@ -137,14 +137,14 @@
 const char * const lookupTableAccHardware[] = {
     "AUTO", "NONE", "ADXL345", "MPU6050", "MMA8452", "BMA280", "LSM303DLHC",
     "MPU6000", "MPU6500", "MPU9250", "ICM20601", "ICM20602", "ICM20608G", "ICM20649", "ICM20689", "ICM42605", "ICM42688P",
-    "BMI160", "BMI270", "LSM6DSO", "FAKE"
+    "BMI160", "BMI270", "LSM6DSO", "BMI088", "FAKE"
 };
 
 // sync with gyroHardware_e
 const char * const lookupTableGyroHardware[] = {
     "AUTO", "NONE", "MPU6050", "L3G4200D", "MPU3050", "L3GD20",
     "MPU6000", "MPU6500", "MPU9250", "ICM20601", "ICM20602", "ICM20608G", "ICM20649", "ICM20689", "ICM42605", "ICM42688P",
-    "BMI160", "BMI270", "LSM6SDO", "FAKE"
+    "BMI160", "BMI270", "LSM6SDO", "BMI088", "FAKE"
 };
 
 #if defined(USE_SENSOR_NAMES) || defined(USE_BARO)
@@ -236,6 +236,7 @@ static const char * const lookupTableSerialRX[] = {
     "SBUS2",
     "FPORT2",
     "FBUS",
+    "XB-A",
 };
 #endif
 
@@ -802,6 +803,11 @@ const clivalue_t valueTable[] = {
     { "blackbox_log_esc",           VAR_UINT32 | MASTER_VALUE | MODE_BITSET, .config.bitpos = FLIGHT_LOG_FIELD_SELECT_ESC, PG_BLACKBOX_CONFIG, offsetof(blackboxConfig_t, fields) },
     { "blackbox_log_bec",           VAR_UINT32 | MASTER_VALUE | MODE_BITSET, .config.bitpos = FLIGHT_LOG_FIELD_SELECT_BEC, PG_BLACKBOX_CONFIG, offsetof(blackboxConfig_t, fields) },
     { "blackbox_log_esc2",          VAR_UINT32 | MASTER_VALUE | MODE_BITSET, .config.bitpos = FLIGHT_LOG_FIELD_SELECT_ESC2, PG_BLACKBOX_CONFIG, offsetof(blackboxConfig_t, fields) },
+#ifdef USE_FLASHFS_LOOP
+    { "blackbox_initial_erase_kb",  VAR_UINT16 | MASTER_VALUE, .config.minmaxUnsigned = { 0, UINT16_MAX }, PG_BLACKBOX_CONFIG, offsetof(blackboxConfig_t, initialEraseFreeSpaceKiB) },
+    { "blackbox_rolling_erase",     VAR_UINT8  | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_BLACKBOX_CONFIG, offsetof(blackboxConfig_t, rollingErase) },
+#endif
+    { "blackbox_grace_period",      VAR_UINT8  | MASTER_VALUE, .config.minmaxUnsigned = { 0, 60 }, PG_BLACKBOX_CONFIG, offsetof(blackboxConfig_t, gracePeriod) },
 #endif
 
 // PG_MOTOR_CONFIG
@@ -921,6 +927,8 @@ const clivalue_t valueTable[] = {
     { "swash_pitch_limit",          VAR_UINT16 | MASTER_VALUE,  .config.minmaxUnsigned = { 0, 3000 }, PG_GENERIC_MIXER_CONFIG, offsetof(mixerConfig_t, swash_pitch_limit) },
     { "swash_tta_precomp",          VAR_UINT8  | MASTER_VALUE,  .config.minmaxUnsigned = { 0, 250 }, PG_GENERIC_MIXER_CONFIG, offsetof(mixerConfig_t, swash_tta_precomp) },
     { "swash_geo_correction",       VAR_INT8   | MASTER_VALUE,  .config.minmax = { -125, 125 }, PG_GENERIC_MIXER_CONFIG, offsetof(mixerConfig_t, swash_geo_correction) },
+    { "collective_tilt_correction_pos", VAR_INT8 | MASTER_VALUE,  .config.minmax = { -100, 100 }, PG_GENERIC_MIXER_CONFIG, offsetof(mixerConfig_t, collective_tilt_correction_pos) },
+    { "collective_tilt_correction_neg", VAR_INT8 | MASTER_VALUE,  .config.minmax = { -100, 100 }, PG_GENERIC_MIXER_CONFIG, offsetof(mixerConfig_t, collective_tilt_correction_neg) },
 
 // PG_GOVERNOR_CONFIG
     { "gov_mode",                   VAR_UINT8  |  MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_GOVERNOR_MODE }, PG_GOVERNOR_CONFIG, offsetof(governorConfig_t, gov_mode) },
@@ -974,6 +982,9 @@ const clivalue_t valueTable[] = {
     { "collective_response",      VAR_UINT8  | PROFILE_RATE_VALUE, .config.minmaxUnsigned = { 0, 250 }, PG_CONTROL_RATE_PROFILES, offsetof(controlRateConfig_t, response_time[FD_COLL]) },
 
     { "cyclic_ring",                VAR_UINT8  | PROFILE_RATE_VALUE, .config.minmaxUnsigned = { 0, 100 }, PG_CONTROL_RATE_PROFILES, offsetof(controlRateConfig_t, cyclic_ring) },
+
+    { "setpoint_boost_gain",        VAR_UINT8  | PROFILE_RATE_VALUE | MODE_ARRAY, .config.array.length = 4, PG_CONTROL_RATE_PROFILES, offsetof(controlRateConfig_t, setpoint_boost_gain) },
+    { "setpoint_boost_cutoff",      VAR_UINT8  | PROFILE_RATE_VALUE | MODE_ARRAY, .config.array.length = 4, PG_CONTROL_RATE_PROFILES, offsetof(controlRateConfig_t, setpoint_boost_cutoff) },
 
 // PG_SERIAL_CONFIG
     { "reboot_character",           VAR_UINT8  | MASTER_VALUE, .config.minmaxUnsigned = { 48, 126 }, PG_SERIAL_CONFIG, offsetof(serialConfig_t, reboot_character) },
@@ -1109,8 +1120,9 @@ const clivalue_t valueTable[] = {
 
     { "yaw_cyclic_ff_gain",           VAR_UINT8 | PROFILE_VALUE, .config.minmaxUnsigned = { 0, 250 }, PG_PID_PROFILE, offsetof(pidProfile_t, yaw_cyclic_ff_gain) },
     { "yaw_collective_ff_gain",       VAR_UINT8 | PROFILE_VALUE, .config.minmaxUnsigned = { 0, 250 }, PG_PID_PROFILE, offsetof(pidProfile_t, yaw_collective_ff_gain) },
-    { "yaw_collective_dynamic_gain",  VAR_INT8  | PROFILE_VALUE, .config.minmax = { -125, 125 }, PG_PID_PROFILE, offsetof(pidProfile_t, yaw_collective_dynamic_gain) },
-    { "yaw_collective_dynamic_decay", VAR_UINT8 | PROFILE_VALUE, .config.minmaxUnsigned = { 1, 250 }, PG_PID_PROFILE, offsetof(pidProfile_t, yaw_collective_dynamic_decay) },
+
+    { "yaw_inertia_precomp_gain",      VAR_UINT8 | PROFILE_VALUE, .config.minmaxUnsigned = { 0, 250 }, PG_PID_PROFILE, offsetof(pidProfile_t, yaw_inertia_precomp_gain) },
+    { "yaw_inertia_precomp_cutoff",    VAR_UINT8 | PROFILE_VALUE, .config.minmaxUnsigned = { 0, 250 }, PG_PID_PROFILE, offsetof(pidProfile_t, yaw_inertia_precomp_cutoff) },
 
     { "pitch_collective_ff_gain",   VAR_UINT8 | PROFILE_VALUE, .config.minmaxUnsigned = { 0, 250 }, PG_PID_PROFILE, offsetof(pidProfile_t, pitch_collective_ff_gain) },
 
@@ -1136,6 +1148,9 @@ const clivalue_t valueTable[] = {
     { "offset_bleed_rate_curve",    VAR_UINT8 | PROFILE_VALUE | MODE_ARRAY, .config.array.length = LOOKUP_CURVE_POINTS, PG_PID_PROFILE, offsetof(pidProfile_t, offset_bleed_rate_curve) },
     { "offset_bleed_limit_curve",   VAR_UINT8 | PROFILE_VALUE | MODE_ARRAY, .config.array.length = LOOKUP_CURVE_POINTS, PG_PID_PROFILE, offsetof(pidProfile_t, offset_bleed_limit_curve) },
     { "offset_charge_curve",        VAR_UINT8 | PROFILE_VALUE | MODE_ARRAY, .config.array.length = LOOKUP_CURVE_POINTS, PG_PID_PROFILE, offsetof(pidProfile_t, offset_charge_curve) },
+    { "offset_flood_curve",         VAR_UINT8 | PROFILE_VALUE | MODE_ARRAY, .config.array.length = LOOKUP_CURVE_POINTS, PG_PID_PROFILE, offsetof(pidProfile_t, offset_flood_curve) },
+    { "offset_flood_relax_level",   VAR_UINT8 | PROFILE_VALUE, .config.minmaxUnsigned = { 10, 250 }, PG_PID_PROFILE, offsetof(pidProfile_t, offset_flood_relax_level) },
+    { "offset_flood_relax_cutoff",  VAR_UINT8 | PROFILE_VALUE, .config.minmaxUnsigned = { 1, 100 }, PG_PID_PROFILE, offsetof(pidProfile_t, offset_flood_relax_cutoff) },
 
     { "iterm_relax_type",           VAR_UINT8  | PROFILE_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_ITERM_RELAX_TYPE }, PG_PID_PROFILE, offsetof(pidProfile_t, iterm_relax_type) },
     { "iterm_relax_level",          VAR_UINT8  | PROFILE_VALUE | MODE_ARRAY, .config.array.length = 3, PG_PID_PROFILE, offsetof(pidProfile_t, iterm_relax_level) },
@@ -1205,7 +1220,6 @@ const clivalue_t valueTable[] = {
     { "frsky_vfas_precision",       VAR_UINT8  | MASTER_VALUE, .config.minmaxUnsigned = { FRSKY_VFAS_PRECISION_LOW,  FRSKY_VFAS_PRECISION_HIGH }, PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, frsky_vfas_precision) },
 #endif // USE_TELEMETRY_FRSKY_HUB
     { "hott_alarm_int",             VAR_UINT8  | MASTER_VALUE, .config.minmaxUnsigned = { 0, 120 }, PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, hottAlarmSoundInterval) },
-    { "pid_in_tlm",                 VAR_UINT8  | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, pidValuesAsTelemetry) },
     { "report_cell_voltage",        VAR_UINT8  | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, report_cell_voltage) },
 #if defined(USE_TELEMETRY_IBUS)
     { "ibus_sensor",                VAR_UINT8  | MASTER_VALUE | MODE_ARRAY, .config.array.length = IBUS_SENSOR_COUNT, PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, flysky_sensors)},
@@ -1219,44 +1233,10 @@ const clivalue_t valueTable[] = {
     { "crsf_telemetry_mode",         VAR_UINT8  | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_TELEM_MODE }, PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, crsf_telemetry_mode) },
     { "crsf_telemetry_link_rate",    VAR_UINT16 | MASTER_VALUE, .config.minmaxUnsigned = { 0, 50000 }, PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, crsf_telemetry_link_rate) },
     { "crsf_telemetry_link_ratio",   VAR_UINT16 | MASTER_VALUE, .config.minmaxUnsigned = { 0, 50000 }, PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, crsf_telemetry_link_ratio) },
-    { "crsf_telemetry_sensors",      VAR_UINT16 | MASTER_VALUE | MODE_ARRAY, .config.array.length = TELEM_SENSOR_SLOT_COUNT, PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, crsf_telemetry_sensors)},
-    { "crsf_telemetry_interval",     VAR_UINT16 | MASTER_VALUE | MODE_ARRAY, .config.array.length = TELEM_SENSOR_SLOT_COUNT, PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, crsf_telemetry_interval)},
 
-#ifdef USE_TELEMETRY_ENABLE_SENSORS
-    { "telemetry_enable_voltage",         VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_VOLTAGE),         PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_current",         VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_CURRENT),         PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_fuel",            VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_FUEL),            PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_mode",            VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_MODE),            PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_acc_x",           VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_ACC_X),           PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_acc_y",           VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_ACC_Y),           PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_acc_z",           VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_ACC_Z),           PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_pitch",           VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_PITCH),           PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_roll",            VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_ROLL),            PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_heading",         VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_HEADING),         PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_altitude",        VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_ALTITUDE),        PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_vario",           VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_VARIO),           PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_lat_long",        VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_LAT_LONG),        PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_ground_speed",    VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_GROUND_SPEED),    PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_distance",        VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_DISTANCE),        PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_esc_current",     VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(ESC_SENSOR_CURRENT),     PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_esc_voltage",     VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(ESC_SENSOR_VOLTAGE),     PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_esc_rpm",         VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(ESC_SENSOR_RPM),         PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_esc_temperature", VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(ESC_SENSOR_TEMPERATURE), PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_temperature",     VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_TEMPERATURE),     PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_cap_used",        VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_CAP_USED),        PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_adjustment",      VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_ADJUSTMENT),      PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_gov_mode",        VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_GOV_MODE),        PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_model_id",        VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_MODEL_ID),        PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_pid_profile",     VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_PID_PROFILE),     PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_rates_profile",   VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_RATES_PROFILE),   PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_bec_voltage",     VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_BEC_VOLTAGE),     PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_headspeed",       VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_HEADSPEED),       PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_tailspeed",       VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_TAILSPEED),       PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_throttle_control",VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_THROTTLE_CONTROL),PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-    { "telemetry_enable_arming_flags",    VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = LOG2(SENSOR_ARMING_FLAGS),    PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-#else
-    { "telemetry_enable_sensors",         VAR_UINT32 | MASTER_VALUE, .config.u32Max = SENSOR_ALL, PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, enableSensors)},
-#endif
+    { "telemetry_sensors",      VAR_UINT16 | MASTER_VALUE | MODE_ARRAY, .config.array.length = TELEM_SENSOR_SLOT_COUNT, PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, telemetry_sensors)},
+    { "telemetry_interval",     VAR_UINT16 | MASTER_VALUE | MODE_ARRAY, .config.array.length = TELEM_SENSOR_SLOT_COUNT, PG_TELEMETRY_CONFIG, offsetof(telemetryConfig_t, telemetry_interval)},
+
 #endif // USE_TELEMETRY
 
 // PG_LED_STRIP_CONFIG
@@ -1561,12 +1541,15 @@ const clivalue_t valueTable[] = {
 #ifdef USE_SERIAL_PINSWAP
     { "esc_sensor_pinswap",             VAR_UINT8   | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_ESC_SENSOR_CONFIG, offsetof(escSensorConfig_t, pinSwap) },
 #endif
-    { "esc_sensor_update_hz",           VAR_UINT16  | MASTER_VALUE, .config.minmaxUnsigned = { 10, 500 }, PG_ESC_SENSOR_CONFIG, offsetof(escSensorConfig_t, update_hz) },
-    { "esc_sensor_current_offset",      VAR_UINT16  | MASTER_VALUE, .config.minmaxUnsigned = { 0, 16000 }, PG_ESC_SENSOR_CONFIG, offsetof(escSensorConfig_t, current_offset) },
-    { "esc_sensor_hw4_current_offset",  VAR_UINT16  | MASTER_VALUE, .config.minmaxUnsigned = { 0, 1000 }, PG_ESC_SENSOR_CONFIG, offsetof(escSensorConfig_t, hw4_current_offset) },
-    { "esc_sensor_hw4_current_gain",    VAR_UINT8   | MASTER_VALUE, .config.minmaxUnsigned = { 0, 250 }, PG_ESC_SENSOR_CONFIG, offsetof(escSensorConfig_t, hw4_current_gain) },
-    { "esc_sensor_hw4_voltage_gain",    VAR_UINT8   | MASTER_VALUE, .config.minmaxUnsigned = { 0, 250 }, PG_ESC_SENSOR_CONFIG, offsetof(escSensorConfig_t, hw4_voltage_gain) },
-    { "esc_sensor_filter_cutoff",       VAR_UINT8   | MASTER_VALUE, .config.minmaxUnsigned = { 0, 250 }, PG_ESC_SENSOR_CONFIG, offsetof(escSensorConfig_t, filter_cutoff) },
+    { "esc_sensor_update_hz",               VAR_UINT16  | MASTER_VALUE, .config.minmaxUnsigned = { 10, 500 }, PG_ESC_SENSOR_CONFIG, offsetof(escSensorConfig_t, update_hz) },
+    { "esc_sensor_current_offset",          VAR_UINT16  | MASTER_VALUE, .config.minmaxUnsigned = { 0, 16000 }, PG_ESC_SENSOR_CONFIG, offsetof(escSensorConfig_t, current_offset) },
+    { "esc_sensor_hw4_current_offset",      VAR_UINT16  | MASTER_VALUE, .config.minmaxUnsigned = { 0, 1000 }, PG_ESC_SENSOR_CONFIG, offsetof(escSensorConfig_t, hw4_current_offset) },
+    { "esc_sensor_hw4_current_gain",        VAR_UINT8   | MASTER_VALUE, .config.minmaxUnsigned = { 0, 250 }, PG_ESC_SENSOR_CONFIG, offsetof(escSensorConfig_t, hw4_current_gain) },
+    { "esc_sensor_hw4_voltage_gain",        VAR_UINT8   | MASTER_VALUE, .config.minmaxUnsigned = { 0, 250 }, PG_ESC_SENSOR_CONFIG, offsetof(escSensorConfig_t, hw4_voltage_gain) },
+    { "esc_sensor_filter_cutoff",           VAR_UINT8   | MASTER_VALUE, .config.minmaxUnsigned = { 0, 250 }, PG_ESC_SENSOR_CONFIG, offsetof(escSensorConfig_t, filter_cutoff) },
+    { "esc_sensor_voltage_correction",      VAR_INT8    | MASTER_VALUE, .config.minmax = { -100, 125 }, PG_ESC_SENSOR_CONFIG, offsetof(escSensorConfig_t, voltage_correction) },
+    { "esc_sensor_current_correction",      VAR_INT8    | MASTER_VALUE, .config.minmax = { -100, 125 }, PG_ESC_SENSOR_CONFIG, offsetof(escSensorConfig_t, current_correction) },
+    { "esc_sensor_consumption_correction",  VAR_INT8    | MASTER_VALUE, .config.minmax = { -100, 125 }, PG_ESC_SENSOR_CONFIG, offsetof(escSensorConfig_t, consumption_correction) },
 #endif
 
 #ifdef USE_RX_FRSKY_SPI
@@ -1694,10 +1677,17 @@ const clivalue_t valueTable[] = {
 #endif
 
 #ifdef USE_RPM_FILTER
-    { "gyro_rpm_filter_bank_rpm_source", VAR_UINT8  | MASTER_VALUE | MODE_ARRAY, .config.array.length = RPM_FILTER_BANK_COUNT, PG_RPM_FILTER_CONFIG, offsetof(rpmFilterConfig_t, filter_bank_rpm_source) },
-    { "gyro_rpm_filter_bank_rpm_ratio",  VAR_UINT16 | MASTER_VALUE | MODE_ARRAY, .config.array.length = RPM_FILTER_BANK_COUNT, PG_RPM_FILTER_CONFIG, offsetof(rpmFilterConfig_t, filter_bank_rpm_ratio) },
-    { "gyro_rpm_filter_bank_rpm_limit",  VAR_UINT16 | MASTER_VALUE | MODE_ARRAY, .config.array.length = RPM_FILTER_BANK_COUNT, PG_RPM_FILTER_CONFIG, offsetof(rpmFilterConfig_t, filter_bank_rpm_limit) },
-    { "gyro_rpm_filter_bank_notch_q",    VAR_UINT8  | MASTER_VALUE | MODE_ARRAY, .config.array.length = RPM_FILTER_BANK_COUNT, PG_RPM_FILTER_CONFIG, offsetof(rpmFilterConfig_t, filter_bank_notch_q) },
+    { "gyro_rpm_notch_preset",       VAR_UINT8 | MASTER_VALUE, .config.minmaxUnsigned = { 0, 3 }, PG_RPM_FILTER_CONFIG, offsetof(rpmFilterConfig_t, preset) },
+    { "gyro_rpm_notch_min_hz",       VAR_UINT8 | MASTER_VALUE, .config.minmaxUnsigned = { 1, 100 }, PG_RPM_FILTER_CONFIG, offsetof(rpmFilterConfig_t, min_hz) },
+    { "gyro_rpm_notch_source_pitch", VAR_UINT8 | MASTER_VALUE | MODE_ARRAY, .config.array.length = RPM_FILTER_NOTCH_COUNT, PG_RPM_FILTER_CONFIG, offsetof(rpmFilterConfig_t, custom.notch_source[PITCH]) },
+    { "gyro_rpm_notch_center_pitch", VAR_INT16 | MASTER_VALUE | MODE_ARRAY, .config.array.length = RPM_FILTER_NOTCH_COUNT, PG_RPM_FILTER_CONFIG, offsetof(rpmFilterConfig_t, custom.notch_center[PITCH]) },
+    { "gyro_rpm_notch_q_pitch",      VAR_UINT8 | MASTER_VALUE | MODE_ARRAY, .config.array.length = RPM_FILTER_NOTCH_COUNT, PG_RPM_FILTER_CONFIG, offsetof(rpmFilterConfig_t, custom.notch_q[PITCH]) },
+    { "gyro_rpm_notch_source_roll",  VAR_UINT8 | MASTER_VALUE | MODE_ARRAY, .config.array.length = RPM_FILTER_NOTCH_COUNT, PG_RPM_FILTER_CONFIG, offsetof(rpmFilterConfig_t, custom.notch_source[ROLL]) },
+    { "gyro_rpm_notch_center_roll",  VAR_INT16 | MASTER_VALUE | MODE_ARRAY, .config.array.length = RPM_FILTER_NOTCH_COUNT, PG_RPM_FILTER_CONFIG, offsetof(rpmFilterConfig_t, custom.notch_center[ROLL]) },
+    { "gyro_rpm_notch_q_roll",       VAR_UINT8 | MASTER_VALUE | MODE_ARRAY, .config.array.length = RPM_FILTER_NOTCH_COUNT, PG_RPM_FILTER_CONFIG, offsetof(rpmFilterConfig_t, custom.notch_q[ROLL]) },
+    { "gyro_rpm_notch_source_yaw",   VAR_UINT8 | MASTER_VALUE | MODE_ARRAY, .config.array.length = RPM_FILTER_NOTCH_COUNT, PG_RPM_FILTER_CONFIG, offsetof(rpmFilterConfig_t, custom.notch_source[YAW]) },
+    { "gyro_rpm_notch_center_yaw",   VAR_INT16 | MASTER_VALUE | MODE_ARRAY, .config.array.length = RPM_FILTER_NOTCH_COUNT, PG_RPM_FILTER_CONFIG, offsetof(rpmFilterConfig_t, custom.notch_center[YAW]) },
+    { "gyro_rpm_notch_q_yaw",        VAR_UINT8 | MASTER_VALUE | MODE_ARRAY, .config.array.length = RPM_FILTER_NOTCH_COUNT, PG_RPM_FILTER_CONFIG, offsetof(rpmFilterConfig_t, custom.notch_q[YAW]) },
 #endif
 
 #ifdef USE_RX_FLYSKY

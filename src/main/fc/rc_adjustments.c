@@ -181,6 +181,14 @@ static const adjustmentConfig_t adjustmentConfigs[ADJUSTMENT_FUNCTION_COUNT] =
 
     ADJ_CONFIG(ACC_TRIM_PITCH,          NONE,  -300, 300),
     ADJ_CONFIG(ACC_TRIM_ROLL,           NONE,  -300, 300),
+
+    ADJ_CONFIG(INERTIA_PRECOMP_GAIN,    PROF,  0, 250),
+    ADJ_CONFIG(INERTIA_PRECOMP_CUTOFF,  PROF,  0, 250),
+
+    ADJ_CONFIG(PITCH_SP_BOOST_GAIN,     RATE,  0, 255),
+    ADJ_CONFIG(ROLL_SP_BOOST_GAIN,      RATE,  0, 255),
+    ADJ_CONFIG(YAW_SP_BOOST_GAIN,       RATE,  0, 255),
+    ADJ_CONFIG(COLL_SP_BOOST_GAIN,      RATE,  0, 255),
 };
 
 
@@ -283,10 +291,10 @@ static int getAdjustmentValue(adjustmentFunc_e adjFunc)
             value = currentPidProfile->yaw_collective_ff_gain;
             break;
         case ADJUSTMENT_YAW_COLLECTIVE_DYN:
-            value = currentPidProfile->yaw_collective_dynamic_gain;
+            value = 0;
             break;
         case ADJUSTMENT_YAW_COLLECTIVE_DECAY:
-            value = currentPidProfile->yaw_collective_dynamic_decay;
+            value = 0;
             break;
         case ADJUSTMENT_PITCH_COLLECTIVE_FF:
             value = currentPidProfile->pitch_collective_ff_gain;
@@ -389,6 +397,24 @@ static int getAdjustmentValue(adjustmentFunc_e adjFunc)
             break;
         case ADJUSTMENT_ACC_TRIM_ROLL:
             value = accelerometerConfig()->accelerometerTrims.values.roll;
+            break;
+        case ADJUSTMENT_INERTIA_PRECOMP_GAIN:
+            value = currentPidProfile->yaw_inertia_precomp_gain;
+            break;
+        case ADJUSTMENT_INERTIA_PRECOMP_CUTOFF:
+            value = currentPidProfile->yaw_inertia_precomp_cutoff;
+            break;
+        case ADJUSTMENT_PITCH_SP_BOOST_GAIN:
+            value = currentControlRateProfile->setpoint_boost_gain[FD_PITCH];
+            break;
+        case ADJUSTMENT_ROLL_SP_BOOST_GAIN:
+            value = currentControlRateProfile->setpoint_boost_gain[FD_ROLL];
+            break;
+        case ADJUSTMENT_YAW_SP_BOOST_GAIN:
+            value = currentControlRateProfile->setpoint_boost_gain[FD_YAW];
+            break;
+        case ADJUSTMENT_COLL_SP_BOOST_GAIN:
+            value = currentControlRateProfile->setpoint_boost_gain[FD_COLL];
             break;
         case ADJUSTMENT_FUNCTION_COUNT:
             break;
@@ -494,10 +520,8 @@ static void setAdjustmentValue(adjustmentFunc_e adjFunc, int value)
             currentPidProfile->yaw_collective_ff_gain = value;
             break;
         case ADJUSTMENT_YAW_COLLECTIVE_DYN:
-            currentPidProfile->yaw_collective_dynamic_gain = value;
             break;
         case ADJUSTMENT_YAW_COLLECTIVE_DECAY:
-            currentPidProfile->yaw_collective_dynamic_decay = value;
             break;
         case ADJUSTMENT_PITCH_COLLECTIVE_FF:
             currentPidProfile->pitch_collective_ff_gain = value;
@@ -600,6 +624,24 @@ static void setAdjustmentValue(adjustmentFunc_e adjFunc, int value)
             break;
         case ADJUSTMENT_ACC_TRIM_ROLL:
             accelerometerConfigMutable()->accelerometerTrims.values.roll = value;
+            break;
+        case ADJUSTMENT_INERTIA_PRECOMP_GAIN:
+            currentPidProfile->yaw_inertia_precomp_gain = value;
+            break;
+        case ADJUSTMENT_INERTIA_PRECOMP_CUTOFF:
+            currentPidProfile->yaw_inertia_precomp_cutoff = value;
+            break;
+        case ADJUSTMENT_PITCH_SP_BOOST_GAIN:
+            currentControlRateProfile->setpoint_boost_gain[FD_PITCH] = value;
+            break;
+        case ADJUSTMENT_ROLL_SP_BOOST_GAIN:
+            currentControlRateProfile->setpoint_boost_gain[FD_ROLL] = value;
+            break;
+        case ADJUSTMENT_YAW_SP_BOOST_GAIN:
+            currentControlRateProfile->setpoint_boost_gain[FD_YAW] = value;
+            break;
+        case ADJUSTMENT_COLL_SP_BOOST_GAIN:
+            currentControlRateProfile->setpoint_boost_gain[FD_COLL] = value;
             break;
         case ADJUSTMENT_FUNCTION_COUNT:
             break;

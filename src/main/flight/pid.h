@@ -79,15 +79,12 @@ typedef struct {
 
 typedef struct {
 
-    filter_t collDeflectionFilter;
-    filter_t pitchDeflectionFilter;
-    filter_t rollDeflectionFilter;
+    filter_t yawPrecompFilter;
+    difFilter_t yawInertiaFilter;
 
-    pt1Filter_t collDynamicFilter;
-
-    float yawCyclicFFGain;
     float yawCollectiveFFGain;
-    float yawCollectiveDynamicGain;
+    float yawCyclicFFGain;
+    float yawInertiaGain;
 
     float pitchCollectiveFFGain;
 
@@ -137,7 +134,8 @@ typedef struct pid_s {
 
     order1Filter_t crossCouplingFilter[XY_AXIS_COUNT];
 
-} pid_t;
+    pt1Filter_t offsetFloodRelaxFilter;
+} pidData_t;
 
 
 void pidController(const pidProfile_t *pidProfile, timeUs_t currentTimeUs);

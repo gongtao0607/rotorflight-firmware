@@ -141,6 +141,9 @@ typedef struct pidProfile_s {
     uint8_t             offset_bleed_rate_curve[LOOKUP_CURVE_POINTS];
     uint8_t             offset_bleed_limit_curve[LOOKUP_CURVE_POINTS];
     uint8_t             offset_charge_curve[LOOKUP_CURVE_POINTS];
+    uint8_t             offset_flood_curve[LOOKUP_CURVE_POINTS];
+    uint8_t             offset_flood_relax_level;
+    uint8_t             offset_flood_relax_cutoff;
 
     uint8_t             error_rotation;
 
@@ -166,8 +169,8 @@ typedef struct pidProfile_s {
 
     uint8_t             yaw_cyclic_ff_gain;
     uint8_t             yaw_collective_ff_gain;
-    uint8_t             yaw_collective_dynamic_gain;
-    uint8_t             yaw_collective_dynamic_decay;
+    uint8_t             yaw_inertia_precomp_gain;
+    uint8_t             yaw_inertia_precomp_cutoff;
 
     uint8_t             pitch_collective_ff_gain;
 

@@ -234,6 +234,7 @@ SPEED_OPTIMISED_SRC := $(SPEED_OPTIMISED_SRC) \
             drivers/accgyro/accgyro_mpu3050.c \
             drivers/accgyro/accgyro_spi_bmi160.c \
             drivers/accgyro/accgyro_spi_bmi270.c \
+            drivers/accgyro/accgyro_spi_bmi088.c \
             drivers/accgyro/accgyro_spi_lsm6dso.c \
             drivers/accgyro_legacy/accgyro_adxl345.c \
             drivers/accgyro_legacy/accgyro_bma280.c \
@@ -403,9 +404,9 @@ ifneq ($(filter ONBOARDFLASH,$(FEATURES)),)
 SRC += \
             drivers/flash.c \
             drivers/flash_m25p16.c \
-            drivers/flash_w25n01g.c \
             drivers/flash_w25q128fv.c \
             drivers/flash_w25m.c \
+            drivers/flash_w25n.c \
             io/flashfs.c \
             $(MSC_SRC)
 endif

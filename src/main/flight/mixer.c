@@ -192,12 +192,52 @@ static inline void mixerApplyInputLimit(int index, float value)
     }
 }
 
+/*
+ * Check if the mixer index is one of the stabilized axes. If so,
+ * return the overriden value (directly from RC). Otherwise, return original
+ * value.
+ */
+static float mixerGetPassthroughInput(const int index,
+                                      const float original_value)
+{
+    float rc = 0;
+    switch (index) {
+    case MIXER_IN_STABILIZED_ROLL:
+        rc = getRcDeflection(ROLL);
+        break;
+    case MIXER_IN_STABILIZED_PITCH:
+        rc = getRcDeflection(PITCH);
+        break;
+    case MIXER_IN_STABILIZED_YAW:
+        // Normally, yaw command is reversed in setpoint.c (unlike other axes).
+        // As we passthrough RC commands we want to keep the same reversal.
+        rc = -getRcDeflection(YAW);
+        break;
+    case MIXER_IN_STABILIZED_COLLECTIVE:
+        rc = getRcDeflection(COLLECTIVE);
+        break;
+    default:
+        return original_value;
+    }
+
+    // Scale rc by 120% for easier observing endpoints.
+    rc *= 1.2f;
+
+    if (rc > 0) {
+        return scaleRangef(rc, 0, 1.0f, 0, mixerInputs(index)->max / 1000.0f);
+    }
+    return scaleRangef(rc, 0, -1.0f, 0, mixerInputs(index)->min / 1000.0f);
+}
+
 static void mixerSetInput(int index, float value)
 {
     // Use override or wiggle only if not armed
     if (!ARMING_FLAG(ARMED)) {
         if (mixer.override[index] >= MIXER_OVERRIDE_MIN && mixer.override[index] <= MIXER_OVERRIDE_MAX) {
             value = mixer.override[index] / 1000.0f;
+        }
+        else if (mixer.override[index] == MIXER_OVERRIDE_PASSTHROUGH) {
+            value = mixerGetPassthroughInput(index, value);
         }
         else if (wiggleActive()) {
             if (index >= MIXER_IN_STABILIZED_ROLL && index <= MIXER_IN_STABILIZED_COLLECTIVE)
@@ -306,15 +346,31 @@ static float mixerCollectiveCorrection(float SC)
     return SC;
 }
 
+static float mixerCollectiveScale(float SC, float SR, float SP)
+{
+    float beta;
+    if (SC > 0) {
+        beta = mixerConfig()->collective_tilt_correction_pos / 100.0f;
+    } else {
+        beta = -mixerConfig()->collective_tilt_correction_neg / 100.0f;
+    }
+    float scale = 1 + beta * (SR * SR + SP * SP);
+    scale = constrainf(scale, 0.0f, 2.0f);
+    return SC * scale;
+}
+
 static void mixerUpdateMotorizedTail(void)
 {
     // Motorized tail control
     if (mixerIsTailMode(TAIL_MODE_MOTORIZED)) {
         // Yaw input value - positive is against torque
-        const float yaw = mixer.input[MIXER_IN_STABILIZED_YAW] * mixerRotationSign();
+        float yaw = mixer.input[MIXER_IN_STABILIZED_YAW] * mixerRotationSign();
 
         // Add center trim
-        float throttle = yaw + mixer.tailCenterTrim;
+        yaw += mixer.tailCenterTrim;
+
+        // Square root law
+        float throttle = sqrtf(fmaxf(yaw, 0));
 
         // Apply minimum throttle
         throttle = fmaxf(throttle, mixer.tailMotorIdle);
@@ -333,10 +389,13 @@ static void mixerUpdateMotorizedTail(void)
     // Bidirectional tail motor
     else if (mixerIsTailMode(TAIL_MODE_BIDIRECTIONAL)) {
         // Yaw input value - positive is against torque
-        const float yaw = mixer.input[MIXER_IN_STABILIZED_YAW] * mixerRotationSign();
+        float yaw = mixer.input[MIXER_IN_STABILIZED_YAW] * mixerRotationSign();
 
         // Add center trim
-        float throttle = yaw + mixer.tailCenterTrim;
+        yaw += mixer.tailCenterTrim;
+
+        // Use square root law
+        float throttle = copysignf(sqrtf(fabsf(yaw)), yaw);
 
         // Apply minimum throttle
         if (throttle > -mixer.tailMotorIdle && throttle < mixer.tailMotorIdle)
@@ -375,6 +434,7 @@ static void mixerUpdateSwash(void)
         float TC = mixer.tailCenterTrim;
 
         SC = mixerCollectiveCorrection(SC);
+        SC = mixerCollectiveScale(SC, SR, SP);
 
         SR += mixer.swashTrim[0];
         SP += mixer.swashTrim[1];

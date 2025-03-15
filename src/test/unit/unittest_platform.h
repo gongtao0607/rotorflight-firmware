@@ -31,6 +31,14 @@
 #define FAST_CODE_NOINLINE
 #define FAST_DATA_ZERO_INIT
 #define FAST_DATA
+#define INIT_CODE
+#define INIT_ZERO  { 0, }
+
+#define DMA_DATA_ZERO_INIT
+#define DMA_DATA
+#define STATIC_DMA_DATA_AUTO        static
+
+#define	__unused	__attribute__((__unused__))
 
 #define PID_PROFILE_COUNT 3
 #define CONTROL_RATE_PROFILE_COUNT  6
@@ -107,6 +115,7 @@ typedef struct
 #define WS2811_DMA_TC_FLAG (void *)1
 #define WS2811_DMA_HANDLER_IDENTIFER 0
 #define NVIC_PriorityGroup_2 0x500
+#define SYSTEM_HSE_VALUE 0
 
 #define MCU_TYPE_ID   99
 #define MCU_TYPE_NAME "UNIT_TEST"
