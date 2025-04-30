@@ -39,6 +39,8 @@
 #include "nvic.h"
 #include "pg/bus_spi.h"
 
+#include "SEGGER_SYSVIEW.h"
+
 #define NUM_QUEUE_SEGS 5
 
 static uint8_t spiRegisteredDeviceCount = 0;
@@ -448,6 +450,7 @@ static void spiIrqHandler(const extDevice_t *dev)
 // Interrupt handler for SPI receive DMA completion
 static void spiRxIrqHandler(dmaChannelDescriptor_t* descriptor)
 {
+    //SEGGER_SYSVIEW_RecordEnterISR();
     const extDevice_t *dev = (const extDevice_t *)descriptor->userParam;
 
     if (!dev) {
@@ -479,12 +482,14 @@ static void spiRxIrqHandler(dmaChannelDescriptor_t* descriptor)
 #endif // __DCACHE_PRESENT
 
     spiIrqHandler(dev);
+    //SEGGER_SYSVIEW_RecordExitISR();
 }
 
 #if !defined(STM32G4) && !defined(STM32H7)
 // Interrupt handler for SPI transmit DMA completion
 static void spiTxIrqHandler(dmaChannelDescriptor_t* descriptor)
 {
+    //SEGGER_SYSVIEW_RecordEnterISR();
     const extDevice_t *dev = (const extDevice_t *)descriptor->userParam;
 
     if (!dev) {
@@ -501,6 +506,7 @@ static void spiTxIrqHandler(dmaChannelDescriptor_t* descriptor)
     }
 
     spiIrqHandler(dev);
+    //SEGGER_SYSVIEW_RecordExitISR();
 }
 #endif
 

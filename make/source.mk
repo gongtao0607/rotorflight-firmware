@@ -458,3 +458,17 @@ INCLUDE_DIRS += $(OLC_DIR)
 SRC += $(OLC_DIR)/olc.c
 SIZE_OPTIMISED_SRC += $(OLC_DIR)/olc.c
 endif
+
+SYSVIEW_LIB_DIR = $(ROOT)/lib/main/SEGGER
+SYSVIEW_CONF_DIR = $(ROOT)/src/main/sysview
+ifneq ($(filter SYSVIEW,$(FEATURES)),)
+INCLUDE_DIRS += $(SYSVIEW_LIB_DIR) $(SYSVIEW_CONF_DIR)
+SRC += \
+            $(SYSVIEW_LIB_DIR)/SEGGER_RTT.c \
+            $(SYSVIEW_LIB_DIR)/SEGGER_RTT_ASM_ARMv7M.S \
+            $(SYSVIEW_LIB_DIR)/SEGGER_RTT_printf.c \
+            $(SYSVIEW_LIB_DIR)/SEGGER_SYSVIEW.c \
+            $(SYSVIEW_CONF_DIR)/SEGGER_SYSVIEW_Config_rotorflight.c \
+            $(SYSVIEW_CONF_DIR)/SEGGER_SYSVIEW_rotorflight.c
+TARGET_FLAGS := -DSYSVIEW $(TARGET_FLAGS)
+endif

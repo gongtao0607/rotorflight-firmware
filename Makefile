@@ -101,7 +101,7 @@ include $(ROOT)/make/tools.mk
 HSE_VALUE       ?= 8000000
 
 # used for turning on features like VCP and SDCARD
-FEATURES        =
+FEATURES        = SYSVIEW
 
 # used to disable features based on flash space shortage (larger number => more features disabled)
 FEATURE_CUT_LEVEL_SUPPLIED := $(FEATURE_CUT_LEVEL)

@@ -27,10 +27,17 @@
 
 #include "scheduler/scheduler.h"
 
+#ifdef SYSVIEW
+#include "SEGGER_SYSVIEW.h"
+#endif
+
 void run(void);
 
 int main(void)
 {
+#ifdef SYSVIEW
+    SEGGER_SYSVIEW_Conf();
+#endif
     init();
 
     run();
@@ -46,4 +53,14 @@ FAST_CODE void run(void)
         delayMicroseconds_real(50); // max rate 20kHz
 #endif
     }
+}
+
+int _write(int file, char *ptr, int len)
+{
+    (void)file;
+    int i;
+    for (i = 0; i < len; i++) {
+        ITM_SendChar(*ptr++);
+    }
+    return len;
 }

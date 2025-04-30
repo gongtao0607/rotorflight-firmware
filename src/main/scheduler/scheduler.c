@@ -49,6 +49,9 @@
 
 #include "sensors/gyro_init.h"
 
+#include "SEGGER_SYSVIEW.h"
+static bool sysview_idle_sent = false;
+
 // DEBUG_SCHEDULER, timings for:
 // 0 - Average time spent executing check function
 // 1 - Time spent priortising
@@ -271,6 +274,7 @@ void setTaskEnabled(taskId_e taskId, bool enabled)
     if (taskId == TASK_SELF || taskId < TASK_COUNT) {
         task_t *task = taskId == TASK_SELF ? currentTask : getTask(taskId);
         if (enabled && task->attribute->taskFunc) {
+            SEGGER_SYSVIEW_OnTaskCreate((uint32_t)task);
             queueAdd(task);
         } else {
             queueRemove(task);
@@ -406,7 +410,10 @@ FAST_CODE timeUs_t schedulerExecuteTask(task_t *selectedTask, timeUs_t currentTi
 
         // Execute task
         const timeUs_t currentTimeBeforeTaskCallUs = micros();
+        SEGGER_SYSVIEW_OnTaskStartExec((uint32_t)selectedTask);
+        sysview_idle_sent = false;
         selectedTask->attribute->taskFunc(currentTimeBeforeTaskCallUs);
+        SEGGER_SYSVIEW_OnTaskStopExec();
         const timeUs_t currentTimeAfterTaskCallUs = micros();
 
         taskExecutionTimeUs = currentTimeAfterTaskCallUs - currentTimeBeforeTaskCallUs;
@@ -736,6 +743,11 @@ FAST_CODE void scheduler(void)
                 // If a task has been unable to run, then reduce it's recorded estimated run time to ensure
                 // it's ultimate scheduling
                 selectedTask->anticipatedExecutionTime *= TASK_AGE_EXPEDITE_SCALE;
+            }
+        } else {
+            if (!sysview_idle_sent) {
+                SEGGER_SYSVIEW_OnIdle();
+                sysview_idle_sent = true;
             }
         }
     }
