@@ -112,6 +112,7 @@ extern unsigned int SystemCoreClock;
 static void _cbSendSystemDesc(void) {
   SEGGER_SYSVIEW_SendSysDesc("N="SYSVIEW_APP_NAME",D="SYSVIEW_DEVICE_NAME);
   SEGGER_SYSVIEW_SendSysDesc("I#15=SysTick");
+  SEGGER_SYSVIEW_PrintfHost("HSE=%u", HSE_VALUE);
 }
 
 /*********************************************************************
