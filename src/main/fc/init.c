@@ -255,6 +255,52 @@ static void swdPinsInit(void)
     }
 }
 
+#include "build/mri.h"
+
+static void mriDebugSerialRX(uint16_t byte, void *callback_data) {
+    extern uint8_t Platform_FetchedByte;
+    Platform_FetchedByte = byte;
+    (void)callback_data;
+    extern void mriExceptionHandler(void);
+    mriExceptionHandler();
+}
+
+void USART2_IRQHandler(void)
+{
+    extern void mriExceptionHandler(void);
+    mriExceptionHandler();
+}
+
+static void mriDebugInit()
+{
+
+    serialPort_t *mriPort = NULL;
+    (void)mriPort;
+
+/*
+    // FIXME: use port config
+
+    const serialPortConfig_t *portConfig =
+    findSerialPortConfig(FUNCTION_MRI);
+
+
+    if (!portConfig) {
+        mriPort = NULL;
+        return;
+    }
+*/
+    (void)mriDebugSerialRX;
+#if 0
+    mriPort = openSerialPort(
+        SERIAL_PORT_USART2, // portConfig->identifier,
+        FUNCTION_MRI, NULL, NULL, 230400, MODE_RXTX,
+        SERIAL_NOSWAP | SERIAL_NOT_INVERTED | SERIAL_STOPBITS_1 |
+            SERIAL_PARITY_NO | SERIAL_UNIDIR );
+#endif
+
+    mriInit("MRI_UART_2");
+    // __debugbreak();
+}
 void init(void)
 {
 #ifdef SERIAL_PORT_COUNT
@@ -526,6 +572,9 @@ void init(void)
 #else
     serialInit(featureIsEnabled(FEATURE_SOFTSERIAL), SERIAL_PORT_NONE);
 #endif
+
+    // Initialize MRI (debug) after systemInit and serialInit
+    mriDebugInit();
 
     mixerInit();
 
@@ -986,7 +1035,7 @@ void init(void)
 
     swdPinsInit();
 
-    unusedPinsInit();
+    //unusedPinsInit();
 
     tasksInit();
 

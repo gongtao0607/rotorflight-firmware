@@ -378,7 +378,7 @@ UART_IRQHandler(USART, 1, 1) // USART1 Rx/Tx IRQ Handler
 #endif
 
 #ifdef USE_UART2
-UART_IRQHandler(USART, 2, 2) // USART2 Rx/Tx IRQ Handler
+// UART_IRQHandler(USART, 2, 2) // USART2 Rx/Tx IRQ Handler
 #endif
 
 #ifdef USE_UART3

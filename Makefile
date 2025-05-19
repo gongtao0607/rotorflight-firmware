@@ -302,6 +302,9 @@ LD_FLAGS     = -lm \
                $(EXTRA_LD_FLAGS)
 endif
 
+ADDITIONAL_LIBS = $(ROOT)/lib/main/mri/lib/armv7-m/libmri_stm32f722-rotorflight.a
+CFLAGS += -DMRI=USART2
+
 
 ###############################################################################
 # No user-serviceable parts below
@@ -411,7 +414,7 @@ $(TARGET_HEX): $(TARGET_BIN)
 
 endif
 
-$(TARGET_ELF): $(TARGET_OBJS) $(LD_SCRIPT) $(LD_SCRIPTS)
+$(TARGET_ELF): $(TARGET_OBJS) $(LD_SCRIPT) $(LD_SCRIPTS) $(ADDITIONAL_LIBS)
 	@echo "Linking $(TARGET)" "$(STDOUT)"
 	$(V1) $(CROSS_CC) -o $@ $(filter-out %.ld,$^) $(LD_FLAGS)
 	$(V1) $(SIZE) $(TARGET_ELF)
